@@ -98,8 +98,7 @@ Role-specific interview questions to help you practice before the simulation.
 
 ## 🎥 Demo Video
 
-[▶️ Watch Demo](demo/demo-video.mp4)
-
+[▶️ Watch Demo](demo/ai.mp4)
 ---
 
 ## ⚙️ Setup & Installation
