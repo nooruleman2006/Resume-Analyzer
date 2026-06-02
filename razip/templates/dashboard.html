@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI — Dashboard{% endblock %}
+
+{% block extra_styles %}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;}
+.page-title{font-family:'Sora',sans-serif;font-size:1.55rem;font-weight:700;}
+.page-sub{color:var(--muted);font-size:.88rem;margin-top:.2rem;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1.2rem;margin-bottom:2rem;}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:1.4rem 1.5rem;transition:transform .2s,box-shadow .2s;}
+.stat-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(167,139,250,.1);}
+.stat-label{font-size:.78rem;color:var(--muted);font-weight:500;margin-bottom:.6rem;}
+.stat-value{font-family:'Sora',sans-serif;font-size:2rem;font-weight:700;background:var(--grad-btn);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.stat-delta{font-size:.78rem;color:#16a34a;margin-top:.3rem;}
+.dashboard-grid{display:grid;grid-template-columns:1fr 340px;gap:1.5rem;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.4rem;}
+.see-all{font-size:.82rem;color:var(--purple);text-decoration:none;font-weight:500;}
+.resume-item{display:flex;align-items:center;gap:1rem;padding:.9rem 0;border-bottom:1px solid var(--border);}
+.resume-item:last-child{border-bottom:none;}
+.resume-thumb{width:42px;height:50px;border-radius:8px;background:var(--grad1);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
+.resume-info{flex:1;min-width:0;}
+.resume-name{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.resume-date{font-size:.78rem;color:var(--muted);margin-top:.15rem;}
+.score-badge{padding:.3rem .75rem;border-radius:50px;font-size:.78rem;font-weight:700;flex-shrink:0;}
+.score-high{background:#f0fdf4;color:#16a34a;}
+.score-mid{background:#fefce8;color:#ca8a04;}
+.score-low{background:#fef2f2;color:#ef4444;}
+table{width:100%;border-collapse:collapse;font-size:.86rem;}
+th{text-align:left;padding:.7rem 1rem;background:#fafafa;color:var(--muted);font-size:.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);}
+td{padding:.85rem 1rem;border-bottom:1px solid var(--border);color:var(--text);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafafa;}
+.status-pill{padding:.25rem .7rem;border-radius:50px;font-size:.75rem;font-weight:600;}
+.status-sent{background:#eff6ff;color:#3b82f6;}
+.status-viewed{background:#fefce8;color:#ca8a04;}
+.status-interview{background:#f0fdf4;color:#16a34a;}
+.status-rejected{background:#fef2f2;color:#ef4444;}
+.ring-outer{width:110px;height:110px;border-radius:50%;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(167,139,250,.2);}
+.ring-inner{width:78px;height:78px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.ring-val{font-family:'Sora',sans-serif;font-size:1.4rem;font-weight:700;color:var(--purple);}
+.ring-sub{font-size:.62rem;color:var(--muted);}
+.score-ring-wrap{text-align:center;margin-bottom:1.5rem;}
+.skill-tags{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;}
+.tag{padding:.3rem .8rem;border-radius:50px;font-size:.78rem;font-weight:500;}
+.tag-present{background:linear-gradient(135deg,rgba(244,114,182,.1),rgba(167,139,250,.12));color:var(--purple);}
+.tag-missing{background:#fef2f2;color:#ef4444;border:1px dashed #fecaca;}
+.tag-section-label{font-size:.75rem;color:var(--muted);margin-bottom:.5rem;font-weight:500;}
+.empty-state{text-align:center;padding:2.5rem 1rem;color:var(--muted);}
+.empty-state-icon{font-size:2.5rem;margin-bottom:.8rem;}
+.empty-state p{font-size:.9rem;}
+@media(max-width:1100px){.stats-row{grid-template-columns:repeat(2,1fr)}.dashboard-grid{grid-template-columns:1fr}}
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Welcome back, {{ current_user.first_name }} &#128075;</div>
+    <div class="page-sub">Here's what's happening with your job search today.</div>
+  </div>
+  <a href="{{ url_for('resume.upload') }}" class="btn-primary">+ Upload Resume</a>
+</div>
+
+<!-- Stats Row -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">ATS Score</div>
+    <div class="stat-value">{{ ats_score }}%</div>
+    <div class="stat-delta">Latest resume</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Resumes Uploaded</div>
+    <div class="stat-value">{{ resumes|length }}</div>
+    <div class="stat-delta">All time</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Applications Sent</div>
+    <div class="stat-value">{{ apps_sent }}</div>
+    <div class="stat-delta">Total</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Skills Detected</div>
+    <div class="stat-value">{{ present_skills|length }}</div>
+    <div class="stat-delta">In latest resume</div>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <!-- Left -->
+  <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+    <!-- Recent Resumes -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">&#128196; Recent Resumes</div>
+        <a href="{{ url_for('resume.upload') }}" class="see-all">Upload New →</a>
+      </div>
+      {% if resumes %}
+        {% for r in resumes %}
+        <div class="resume-item">
+          <div class="resume-thumb">&#128196;</div>
+          <div class="resume-info">
+            <div class="resume-name">{{ r.filename }}</div>
+            <div class="resume-date">Uploaded {{ r.date }}</div>
+          </div>
+          <span class="score-badge score-{{ r.level }}">{{ r.score }}%</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">&#128196;</div>
+          <p>No resumes yet. <a href="{{ url_for('resume.upload') }}" style="color:var(--purple)">Upload your first resume</a></p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Recent Applications -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">&#128140; Recent Applications</div>
+        <a href="{{ url_for('jobs.applications') }}" class="see-all">View All →</a>
+      </div>
+      {% if applications %}
+      <table>
+        <thead><tr><th>Company</th><th>Role</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for a in applications %}
+          <tr>
+            <td><strong>{{ a.company }}</strong></td>
+            <td>{{ a.job_title }}</td>
+            <td>{{ a.applied_fmt }}</td>
+            <td><span class="status-pill {{ a.cls }}">{{ a.status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">&#128269;</div>
+          <p>No applications yet. <a href="{{ url_for('jobs.browse_jobs') }}" style="color:var(--purple)">Browse jobs</a></p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Right -->
+  <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+    <!-- ATS Score Ring -->
+    <div class="card">
+      <div class="card-header"><div class="card-title">&#127919; Latest ATS Score</div></div>
+      <div class="score-ring-wrap">
+        {% set pct = ats_score %}
+        <div class="ring-outer" style="background:conic-gradient(#a78bfa 0% {{ pct }}%,#ede9fe {{ pct }}% 100%);">
+          <div class="ring-inner">
+            <div class="ring-val">{{ pct }}%</div>
+            <div class="ring-sub">ATS Score</div>
+          </div>
+        </div>
+        <p style="font-size:.82rem;color:var(--muted);">
+          {% if pct >= 70 %}<strong style="color:#16a34a">Above Average</strong> — Great score!
+          {% elif pct >= 50 %}<strong style="color:#ca8a04">Average</strong> — Room to improve.
+          {% elif pct > 0 %}<strong style="color:#ef4444">Needs Work</strong> — Follow the suggestions.
+          {% else %}Upload and analyse a resume to see your score.
+          {% endif %}
+        </p>
+      </div>
+      {% if resumes %}
+      <a href="{{ url_for('resume.analysis') }}"
+         class="btn-primary" style="display:block;text-align:center;margin-top:.5rem;">
+        View Full Report
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- Skills -->
+    <div class="card">
+      <div class="card-title">&#127775; Skill Summary</div>
+      {% if present_skills %}
+        <p class="tag-section-label" style="margin-top:.8rem;">&#10003; Detected in your resume</p>
+        <div class="skill-tags">
+          {% for s in present_skills %}<span class="tag tag-present">{{ s }}</span>{% endfor %}
+        </div>
+      {% endif %}
+      {% if missing_skills %}
+        <p class="tag-section-label" style="color:#ef4444">&#9888; Missing keywords</p>
+        <div class="skill-tags">
+          {% for s in missing_skills %}<span class="tag tag-missing">{{ s }}</span>{% endfor %}
+        </div>
+      {% endif %}
+      {% if not present_skills and not missing_skills %}
+        <p style="font-size:.85rem;color:var(--muted);margin-top:.8rem;">Analyse a resume to see your skill breakdown.</p>
+      {% endif %}
+    </div>
+
+
+  </div>
+</div>
+{% endblock %}

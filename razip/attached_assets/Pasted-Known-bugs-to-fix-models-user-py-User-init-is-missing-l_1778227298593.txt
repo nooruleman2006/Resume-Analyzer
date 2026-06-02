@@ -1,0 +1,19 @@
+Known bugs to fix:
+
+models/user.py — User.__init__() is missing last_login=None parameter. The database returns a last_login column but the class doesn't accept it, causing TypeError: User.__init__() got an unexpected keyword argument 'last_login'
+models/user.py — IndentationError on line 8. All code inside the class and methods must use 4-space indentation consistently. No tabs allowed.
+templates/register.html — Has a single "Full Name" field but the backend expects separate first_name and last_name fields. Replace the full name field with two separate inputs using name="first_name" and name="last_name" styled side by side using the existing .form-row-2 CSS class.
+services/pdf_parser.py — Only handles PDF files. Add proper DOCX support using python-docx library that extracts text from paragraphs, tables, and headers/footers. Add legacy .doc support using docx2txt as fallback.
+config.py — SECRET_KEY raises RuntimeError if not set. Change it to use a default fallback for development: SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+requirements.txt — Replace pymupdf==1.24.5 with pypdf==4.3.1 because PyMuPDF fails to install on Python 3.11 without Visual Studio. Also add python-docx==1.1.2 and docx2txt==0.8.
+services/ai_analyzer.py — Uses google-generativeai package. Replace it with direct HTTP calls using the requests library to the Gemini REST API endpoint https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY} so no extra package is needed.
+app.py — The main_bp dashboard route references url_for('resume.dashboard') in base.html but the dashboard is registered under main_bp not resume_bp. Fix all blueprint endpoint references to match their correct blueprint names: dashboard is main.dashboard, upload is resume.upload, jobs is jobs.browse_jobs, applications is jobs.applications, auto-apply is apply.auto_apply_page.
+
+General rules:
+
+Use only spaces (4 spaces per indent level), never tabs
+All Python files must be UTF-8 encoded
+Keep all existing functionality intact — just fix the bugs
+Do not change the database schema in resume.sql
+The app uses Flask, Flask-Login, Flask-WTF, MySQL connector, and Jinja2 templates
+After fixing, the app should start with python app.py and be accessible at http://localhost:5000

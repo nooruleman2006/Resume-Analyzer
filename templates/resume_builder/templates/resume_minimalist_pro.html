@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Resume</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Raleway',sans-serif;font-weight:300;color:#1a1a1a;font-size:9.5pt;line-height:1.7;background:#fff;}
+.page{width:210mm;min-height:297mm;margin:0 auto;padding:0;background:#fff;}
+.header{padding:36px 48px 24px;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:0.5px solid #1a1a1a;}
+.header-left .name{font-size:26pt;font-weight:700;color:#1a1a1a;letter-spacing:-1pt;line-height:1;}
+.header-right{text-align:right;font-size:8pt;font-weight:400;color:#555;line-height:2;}
+.body{padding:24px 48px 40px;}
+.two-col{display:flex;gap:40px;}
+.main{flex:1;}
+.aside{width:64mm;flex-shrink:0;}
+.sec{font-size:7pt;font-weight:700;letter-spacing:3pt;text-transform:uppercase;color:#1a1a1a;margin-top:20px;margin-bottom:10px;}
+.aside .sec:first-child{margin-top:0;}
+.sec:first-child{margin-top:0;}
+.entry{margin-bottom:14px;}
+.entry-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.entry-title{font-weight:600;font-size:9.5pt;color:#1a1a1a;}
+.entry-date{font-size:8pt;color:#888;white-space:nowrap;}
+.entry-sub{font-size:8.5pt;color:#555;font-weight:400;margin-bottom:3px;}
+.entry-body{font-size:9pt;color:#333;line-height:1.6;}
+.entry-body ul{margin-left:14px;}
+.entry-body li{margin-bottom:2px;}
+.skill-row{font-size:9pt;color:#333;padding:4px 0;border-bottom:0.5px solid #e5e5e5;display:flex;justify-content:space-between;}
+.skill-row:last-child{border-bottom:none;}
+.skill-dot{display:flex;gap:3px;}
+.skill-dot span{width:6px;height:6px;border-radius:50%;background:#1a1a1a;}
+.skill-dot span.off{background:#e5e5e5;}
+.cert-item{font-size:8.5pt;color:#333;padding:3px 0;border-bottom:0.5px solid #e5e5e5;}
+.cert-item:last-child{border-bottom:none;}
+.lang-item{font-size:9pt;color:#333;padding:4px 0;border-bottom:0.5px solid #e5e5e5;}
+.lang-item:last-child{border-bottom:none;}
+.summary{font-size:9.5pt;color:#444;line-height:1.75;font-style:italic;margin-bottom:20px;font-weight:400;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-left">
+      <div class="name">{{ personal.name or '' }}</div>
+    </div>
+    <div class="header-right">
+      {% if personal.email %}<div>{{ personal.email }}</div>{% endif %}
+      {% if personal.phone %}<div>{{ personal.phone }}</div>{% endif %}
+      {% if personal.location %}<div>{{ personal.location }}</div>{% endif %}
+      {% if personal.linkedin %}<div>{{ personal.linkedin }}</div>{% endif %}
+      {% if personal.portfolio %}<div>{{ personal.portfolio }}</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="body">
+    {% if summary %}
+    <div class="summary">{{ summary }}</div>
+    {% endif %}
+
+    <div class="two-col">
+      <div class="main">
+        {% if experience %}
+        <div class="sec">Experience</div>
+        {% for e in experience %}
+        <div class="entry">
+          <div class="entry-row">
+            <span class="entry-title">{{ e.role or '' }}</span>
+            <span class="entry-date">{{ e.start or '' }}{% if e.start or e.end %} — {{ e.end or 'Present' }}{% endif %}</span>
+          </div>
+          <div class="entry-sub">{{ e.company or '' }}</div>
+          {% if e.description %}<div class="entry-body"><ul>{% for line in e.description.split('\n') %}{% if line.strip() %}<li>{{ line.strip().lstrip('•').lstrip('-').strip() }}</li>{% endif %}{% endfor %}</ul></div>{% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if projects %}
+        <div class="sec">Projects</div>
+        {% for p in projects %}
+        <div class="entry">
+          <div class="entry-row">
+            <span class="entry-title">{{ p.name or '' }}</span>
+          </div>
+          {% if p.technologies %}<div class="entry-sub">{{ p.technologies }}</div>{% endif %}
+          {% if p.description %}<div class="entry-body">{{ p.description }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="aside">
+        {% if education %}
+        <div class="sec">Education</div>
+        {% for e in education %}
+        <div class="entry">
+          <div class="entry-title" style="font-size:9pt;">{% if e.degree %}{{ e.degree }}{% if e.field %} in {{ e.field }}{% endif %}{% else %}{{ e.field or '' }}{% endif %}</div>
+          <div class="entry-sub">{{ e.institution or '' }}</div>
+          <div style="font-size:8pt;color:#888;">{{ e.year or '' }}</div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if skills %}
+        <div class="sec">Skills</div>
+        {% for s in skills %}
+        <div class="skill-row">
+          <span>{{ s }}</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if certifications %}
+        <div class="sec">Certifications</div>
+        {% for c in certifications %}<div class="cert-item">{{ c.name or '' }}{% if c.year %} ({{ c.year }}){% endif %}</div>{% endfor %}
+        {% endif %}
+
+        {% if languages %}
+        <div class="sec">Languages</div>
+        {% for l in languages %}<div class="lang-item">{{ l.language }} — <span style="color:#888;font-size:8.5pt;">{{ l.level }}</span></div>{% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

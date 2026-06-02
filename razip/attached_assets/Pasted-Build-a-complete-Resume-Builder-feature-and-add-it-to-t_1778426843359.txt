@@ -1,0 +1,71 @@
+Build a complete Resume Builder feature and add it to the existing 
+Flask resume analyzer app. Here are the detailed requirements:
+
+FEATURE — Resume Builder:
+
+1. Create a new route in routes/resume_builder_routes.py:
+   - GET /resume-builder → shows the resume builder page
+   - POST /resume-builder/save → saves resume data to database
+   - GET /resume-builder/export/pdf → exports resume as PDF
+   - GET /resume-builder/export/docx → exports resume as DOCX
+
+2. Create templates/resume_builder.html with a two-panel layout:
+   - LEFT PANEL: Form to fill in resume sections
+   - RIGHT PANEL: Live preview that updates as user types
+
+   Form sections should include:
+   - Personal Info: Full Name, Email, Phone, Location, LinkedIn, 
+     Portfolio/GitHub URL
+   - Professional Summary: textarea for summary
+   - Work Experience: Company, Role, Start Date, End Date, 
+     Description (add multiple entries)
+   - Education: Institution, Degree, Field of Study, Year 
+     (add multiple entries)
+   - Skills: text input with tags (user types skill and presses 
+     enter to add as tag)
+   - Projects: Project Name, Description, Technologies Used, 
+     Project URL (add multiple entries)
+   - Certifications: Certificate Name, Issuing Organization, Year
+   - Languages: Language name and proficiency level dropdown
+
+3. Create 3 ATS-friendly resume templates that user can choose from:
+   - Template 1 "Professional" — clean single column layout
+   - Template 2 "Modern" — two column layout with sidebar
+   - Template 3 "Minimal" — simple clean design with thin borders
+   
+   All templates must be ATS-friendly (no tables, no images, 
+   proper headings, clean fonts)
+
+4. Live Preview:
+   - As user fills the form, the right panel updates in real time
+   - User can switch between 3 templates and preview updates
+   - Show a mock ATS score preview based on content filled
+
+5. Export to PDF:
+   - Use WeasyPrint or ReportLab to export the resume as PDF
+   - PDF should look exactly like the preview
+   - Filename should be "FirstName_LastName_Resume.pdf"
+
+6. Export to DOCX:
+   - Use python-docx to export resume as DOCX file
+   - Clean formatted Word document
+   - Filename should be "FirstName_LastName_Resume.docx"
+
+7. Save Progress:
+   - Save resume builder data to database so user can come back 
+     and continue editing
+   - Add a "My Resumes" section where user can see all saved resumes
+   - User can create multiple resumes for different job types
+
+8. After building the resume, add a button "Analyze This Resume" 
+   that sends the built resume directly to the existing ATS 
+   analyzer without needing to upload a file
+
+9. Add "Resume Builder" link in the main navigation bar
+
+10. Install required packages:
+    - pip install weasyprint python-docx reportlab
+
+Make sure the UI matches the existing site design with the same 
+colors, fonts, and style. The resume builder should feel like a 
+natural part of the existing app.

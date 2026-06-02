@@ -1,0 +1,41 @@
+This is a Flask + Jinja2 + SQLite ResumeAI project. It already has a resume builder feature with 3 Jinja2 HTML templates:
+- templates/resume_professional.html  ← keep this, it is good
+- templates/resume_modern.html        ← REMOVE this entirely
+- templates/resume_minimal.html       ← REPLACE with a new design
+
+Task 1 — Replace & Add Templates
+Replace resume_minimal.html with a new "Colorful Pro" template and add two more brand new templates. The final set of templates must be exactly:
+
+1. professional  → keep resume_professional.html unchanged
+2. colorful_pro  → replace resume_minimal.html with this new design:
+   - Deep navy header (#1a1a2e) with the candidate name in a serif font
+   - Indigo/teal color accent palette (#6366f1 primary, #14b8a6 secondary)
+   - Two-column layout: left sidebar (skills as color-coded chips, education, languages bar, certs) + right main (summary, experience with date badges, projects)
+   - Contact info as pill-shaped chips in the header
+   - Skill chips colored by category: blue for technical, teal for frameworks, amber for tools, pink for soft skills
+   - ATS Score badge shown at the top right
+3. executive     → create a new resume_executive.html:
+   - Full-width single-column layout
+   - Deep forest green header (#0f4c3a) with gold accent (#d4a017)
+   - Name large and centered in an elegant serif font
+   - Horizontal rule dividers between sections
+   - Timeline-style experience (vertical line on the left with dot markers)
+   - Clean, formal, no chips — use plain text lists
+4. creative      → create a new resume_creative.html:
+   - Split layout: left 35% sidebar in deep coral/terracotta (#c0392b or #8B3A3A), right 65% white
+   - Large circular initials avatar in the sidebar
+   - Section icons using Font Awesome or inline SVG (mail, phone, location, linkedin)
+   - Skills shown as horizontal bar charts (CSS width % bars, no JS)
+   - Playful but readable — use a rounded sans font like Nunito from Google Fonts
+
+Delete resume_modern.html completely.
+
+Task 2 — Template Switcher on Preview Page
+On the resume preview page (wherever the built resume is shown after the user fills the form), add a template switcher bar at the top. Requirements:
+
+- Show 4 thumbnail cards side by side: Professional, Colorful Pro, Executive, Creative
+- Each card shows: a small colored dot/icon representing the template, the template name, and a "Preview" button
+- Clicking a template card switches the live preview below to that template instantly (no page reload)
+- The currently selected template card should have a highlighted border (indigo color)
+- Default selected template = professional
+- Implement the switching using JavaScript: on card click, change the src of an 

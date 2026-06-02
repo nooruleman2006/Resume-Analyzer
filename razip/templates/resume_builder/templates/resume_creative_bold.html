@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Resume</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Outfit',sans-serif;color:#1a1a2e;font-size:9.5pt;line-height:1.6;background:#fff;}
+.page{width:210mm;min-height:297mm;margin:0 auto;background:#fff;position:relative;overflow:hidden;}
+.geo-top{position:absolute;top:0;right:0;width:90mm;height:60mm;background:linear-gradient(135deg,#f97316,#ec4899);clip-path:polygon(100% 0,0 0,100% 100%);z-index:0;}
+.geo-dot{position:absolute;top:14mm;right:14mm;width:18mm;height:18mm;border-radius:50%;background:rgba(255,255,255,0.2);}
+.header{position:relative;z-index:1;padding:30px 36px 20px;}
+.name{font-size:24pt;font-weight:800;color:#1a1a2e;line-height:1.1;margin-bottom:4px;}
+.contact-row{display:flex;flex-wrap:wrap;gap:12px;font-size:8.5pt;color:#555;margin-top:8px;}
+.contact-row span{display:flex;align-items:center;gap:4px;}
+.body{position:relative;z-index:1;padding:0 36px 36px;}
+.sec{font-size:8pt;font-weight:800;letter-spacing:2pt;text-transform:uppercase;color:#fff;background:linear-gradient(90deg,#f97316,#ec4899);display:inline-block;padding:3px 12px;border-radius:2px;margin-top:16px;margin-bottom:10px;}
+.entry{margin-bottom:12px;padding-left:14px;border-left:3px solid #fed7aa;}
+.entry.highlight{border-left-color:#f97316;}
+.entry-title{font-weight:600;font-size:10pt;color:#1a1a2e;}
+.entry-meta{font-size:8.5pt;color:#f97316;font-weight:600;margin-bottom:3px;}
+.entry-body{font-size:9pt;color:#444;line-height:1.55;}
+.entry-body ul{margin-left:14px;}
+.entry-body li{margin-bottom:2px;}
+.two-col{display:flex;gap:24px;}
+.col-main{flex:1;}
+.col-side{width:72mm;}
+.skill-pill{display:inline-block;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:20px;font-size:8pt;color:#ea580c;font-weight:600;padding:2px 10px;margin:2px 3px 2px 0;}
+.lang-bar{margin-bottom:6px;}
+.lang-name{font-size:9pt;font-weight:600;color:#1a1a2e;margin-bottom:2px;}
+.bar-bg{background:#f3f4f6;border-radius:10px;height:5px;}
+.bar-fill{height:5px;border-radius:10px;background:linear-gradient(90deg,#f97316,#ec4899);}
+.cert-row{font-size:8.5pt;color:#444;padding:4px 0;border-bottom:1px dashed #fed7aa;}
+.summary{font-size:9.5pt;color:#374151;line-height:1.65;padding:10px 14px;background:#fff7ed;border-left:4px solid #f97316;border-radius:0 6px 6px 0;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="geo-top"></div>
+  <div class="geo-dot"></div>
+  <div class="header">
+    <div class="name">{{ personal.name or '' }}</div>
+    <div class="contact-row">
+      {% if personal.email %}<span>{{ personal.email }}</span>{% endif %}
+      {% if personal.phone %}<span>{{ personal.phone }}</span>{% endif %}
+      {% if personal.location %}<span>{{ personal.location }}</span>{% endif %}
+      {% if personal.linkedin %}<span>{{ personal.linkedin }}</span>{% endif %}
+      {% if personal.portfolio %}<span>{{ personal.portfolio }}</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="body">
+    {% if summary %}
+    <div class="summary">{{ summary }}</div>
+    {% endif %}
+
+    <div class="two-col">
+      <div class="col-main">
+        {% if experience %}
+        <div class="sec">Experience</div>
+        {% for e in experience %}
+        <div class="entry highlight">
+          <div class="entry-title">{{ e.role or '' }}</div>
+          <div class="entry-meta">{{ e.company or '' }} · {{ e.start or '' }}{% if e.start or e.end %} – {{ e.end or 'Present' }}{% endif %}</div>
+          {% if e.description %}<div class="entry-body"><ul>{% for line in e.description.split('\n') %}{% if line.strip() %}<li>{{ line.strip().lstrip('•').lstrip('-').strip() }}</li>{% endif %}{% endfor %}</ul></div>{% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if projects %}
+        <div class="sec">Projects</div>
+        {% for p in projects %}
+        <div class="entry">
+          <div class="entry-title">{{ p.name or '' }}</div>
+          {% if p.technologies %}<div class="entry-meta">{{ p.technologies }}</div>{% endif %}
+          {% if p.description %}<div class="entry-body">{{ p.description }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="col-side">
+        {% if skills %}
+        <div class="sec">Skills</div>
+        <div style="margin-bottom:8px;">{% for s in skills %}<span class="skill-pill">{{ s }}</span>{% endfor %}</div>
+        {% endif %}
+
+        {% if education %}
+        <div class="sec">Education</div>
+        {% for e in education %}
+        <div class="entry" style="margin-bottom:8px;">
+          <div class="entry-title" style="font-size:9pt;">{% if e.degree %}{{ e.degree }}{% if e.field %} in {{ e.field }}{% endif %}{% else %}{{ e.field or '' }}{% endif %}</div>
+          <div class="entry-meta">{{ e.institution or '' }}{% if e.year %} · {{ e.year }}{% endif %}</div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if certifications %}
+        <div class="sec">Certifications</div>
+        {% for c in certifications %}<div class="cert-row">{{ c.name or '' }}{% if c.year %} ({{ c.year }}){% endif %}</div>{% endfor %}
+        {% endif %}
+
+        {% if languages %}
+        <div class="sec">Languages</div>
+        {% for l in languages %}
+        <div class="lang-bar">
+          <div class="lang-name">{{ l.language }} <span style="font-weight:300;font-size:8pt;color:#888;">{{ l.level }}</span></div>
+          <div class="bar-bg"><div class="bar-fill" style="width:{% if l.level in ['Native','Fluent','C2'] %}100%{% elif l.level in ['Advanced','C1'] %}80%{% elif l.level in ['Intermediate','B2','B1'] %}60%{% else %}35%{% endif %};"></div></div>
+        </div>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

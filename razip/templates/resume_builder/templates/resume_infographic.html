@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Resume</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Poppins',sans-serif;color:#1e293b;font-size:9pt;line-height:1.6;background:#fff;}
+.page{width:210mm;min-height:297mm;margin:0 auto;background:#fff;display:flex;}
+.sidebar{width:70mm;background:linear-gradient(180deg,#0ea5e9 0%,#0284c7 40%,#0c4a6e 100%);padding:0;flex-shrink:0;}
+.sb-top{padding:28px 20px 20px;text-align:center;}
+.sb-circle{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.15);border:3px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22pt;font-weight:700;color:#fff;}
+.sb-name{font-size:13pt;font-weight:700;color:#fff;line-height:1.2;margin-bottom:10px;}
+.sb-contact-item{display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;text-align:left;}
+.sb-contact-icon{width:18px;height:18px;background:rgba(255,255,255,0.2);border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#fff;margin-top:1px;}
+.sb-contact-text{font-size:7.5pt;color:rgba(255,255,255,0.85);word-break:break-all;line-height:1.4;}
+.sb-section{padding:14px 20px;}
+.sb-sec{font-size:7.5pt;font-weight:700;letter-spacing:2pt;text-transform:uppercase;color:#bae6fd;margin-bottom:8px;}
+.skill-item{margin-bottom:7px;}
+.skill-label{display:flex;justify-content:space-between;font-size:8pt;color:#fff;margin-bottom:2px;}
+.skill-pct{font-size:7.5pt;color:#bae6fd;}
+.bar-bg{background:rgba(255,255,255,0.15);border-radius:10px;height:5px;}
+.bar-fill{height:5px;border-radius:10px;background:linear-gradient(90deg,#7dd3fc,#fff);}
+.lang-item{display:flex;justify-content:space-between;font-size:8pt;color:rgba(255,255,255,0.85);padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.1);}
+.lang-item:last-child{border-bottom:none;}
+.lang-lvl{color:#bae6fd;font-size:7.5pt;}
+.main{flex:1;padding:28px 24px;}
+.sec{display:flex;align-items:center;gap:8px;margin-top:16px;margin-bottom:8px;}
+.sec:first-child{margin-top:0;}
+.sec-dot{width:10px;height:10px;background:#0ea5e9;border-radius:50%;flex-shrink:0;}
+.sec-label{font-size:8pt;font-weight:700;letter-spacing:1.5pt;text-transform:uppercase;color:#0ea5e9;}
+.sec-line{flex:1;border:none;border-top:1px solid #e2e8f0;}
+.entry{display:flex;gap:10px;margin-bottom:12px;}
+.timeline-col{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:12px;}
+.tl-dot{width:8px;height:8px;background:#0ea5e9;border-radius:50%;flex-shrink:0;}
+.tl-line{flex:1;width:1px;background:#e2e8f0;margin-top:2px;}
+.entry-content{flex:1;padding-bottom:4px;}
+.entry-title{font-weight:600;font-size:9.5pt;color:#0f172a;}
+.entry-org{font-size:8.5pt;color:#0ea5e9;font-weight:500;margin-bottom:1px;}
+.entry-dates{font-size:7.5pt;color:#94a3b8;margin-bottom:3px;background:#f0f9ff;display:inline-block;padding:1px 6px;border-radius:4px;}
+.entry-body{font-size:8.5pt;color:#475569;line-height:1.5;}
+.entry-body ul{margin-left:12px;}
+.entry-body li{margin-bottom:1px;}
+.cert-tag{display:inline-block;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;font-size:8pt;color:#0369a1;padding:2px 8px;margin:2px 3px 2px 0;font-weight:500;}
+.summary{font-size:9pt;color:#374151;line-height:1.65;padding:10px;background:#f0f9ff;border-radius:6px;border-left:3px solid #0ea5e9;margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="sidebar">
+    <div class="sb-top">
+      <div class="sb-circle">{{ (personal.name or 'U')[0] | upper }}</div>
+      <div class="sb-name">{{ personal.name or '' }}</div>
+      <div style="padding-top:4px;">
+        {% if personal.email %}<div class="sb-contact-item"><div class="sb-contact-icon">@</div><div class="sb-contact-text">{{ personal.email }}</div></div>{% endif %}
+        {% if personal.phone %}<div class="sb-contact-item"><div class="sb-contact-icon">#</div><div class="sb-contact-text">{{ personal.phone }}</div></div>{% endif %}
+        {% if personal.location %}<div class="sb-contact-item"><div class="sb-contact-icon">⌖</div><div class="sb-contact-text">{{ personal.location }}</div></div>{% endif %}
+        {% if personal.linkedin %}<div class="sb-contact-item"><div class="sb-contact-icon">in</div><div class="sb-contact-text">{{ personal.linkedin }}</div></div>{% endif %}
+        {% if personal.portfolio %}<div class="sb-contact-item"><div class="sb-contact-icon">↗</div><div class="sb-contact-text">{{ personal.portfolio }}</div></div>{% endif %}
+      </div>
+    </div>
+
+    {% if skills %}
+    <div class="sb-section">
+      <div class="sb-sec">Skills</div>
+      {% set pcts = [95,88,82,90,75,85,78,92,70,86] %}
+      {% for s in skills %}
+      <div class="skill-item">
+        <div class="skill-label"><span>{{ s }}</span><span class="skill-pct">{{ pcts[loop.index0 % 10] }}%</span></div>
+        <div class="bar-bg"><div class="bar-fill" style="width:{{ pcts[loop.index0 % 10] }}%;"></div></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if languages %}
+    <div class="sb-section">
+      <div class="sb-sec">Languages</div>
+      {% for l in languages %}<div class="lang-item"><span>{{ l.language }}</span><span class="lang-lvl">{{ l.level }}</span></div>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% if certifications %}
+    <div class="sb-section">
+      <div class="sb-sec">Certifications</div>
+      {% for c in certifications %}<div style="font-size:8pt;color:rgba(255,255,255,0.85);margin-bottom:4px;">{{ c.name or '' }}{% if c.year %} <span style="color:#bae6fd;">({{ c.year }})</span>{% endif %}</div>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="main">
+    {% if summary %}
+    <div class="sec"><div class="sec-dot"></div><div class="sec-label">Profile</div><hr class="sec-line"></div>
+    <div class="summary">{{ summary }}</div>
+    {% endif %}
+
+    {% if experience %}
+    <div class="sec"><div class="sec-dot"></div><div class="sec-label">Experience</div><hr class="sec-line"></div>
+    {% for e in experience %}
+    <div class="entry">
+      <div class="timeline-col"><div class="tl-dot"></div>{% if not loop.last %}<div class="tl-line"></div>{% endif %}</div>
+      <div class="entry-content">
+        <div class="entry-title">{{ e.role or '' }}</div>
+        <div class="entry-org">{{ e.company or '' }}</div>
+        <div class="entry-dates">{{ e.start or '' }}{% if e.start or e.end %} – {{ e.end or 'Present' }}{% endif %}</div>
+        {% if e.description %}<div class="entry-body"><ul>{% for line in e.description.split('\n') %}{% if line.strip() %}<li>{{ line.strip().lstrip('•').lstrip('-').strip() }}</li>{% endif %}{% endfor %}</ul></div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if education %}
+    <div class="sec"><div class="sec-dot"></div><div class="sec-label">Education</div><hr class="sec-line"></div>
+    {% for e in education %}
+    <div class="entry">
+      <div class="timeline-col"><div class="tl-dot"></div>{% if not loop.last %}<div class="tl-line"></div>{% endif %}</div>
+      <div class="entry-content">
+        <div class="entry-title">{% if e.degree %}{{ e.degree }}{% if e.field %} in {{ e.field }}{% endif %}{% else %}{{ e.field or '' }}{% endif %}</div>
+        <div class="entry-org">{{ e.institution or '' }}</div>
+        <div class="entry-dates">{{ e.year or '' }}</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if projects %}
+    <div class="sec"><div class="sec-dot"></div><div class="sec-label">Projects</div><hr class="sec-line"></div>
+    {% for p in projects %}
+    <div class="entry">
+      <div class="timeline-col"><div class="tl-dot"></div>{% if not loop.last %}<div class="tl-line"></div>{% endif %}</div>
+      <div class="entry-content">
+        <div class="entry-title">{{ p.name or '' }}</div>
+        {% if p.technologies %}<div class="entry-org">{{ p.technologies }}</div>{% endif %}
+        {% if p.description %}<div class="entry-body">{{ p.description }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+</div>
+</body>
+</html>

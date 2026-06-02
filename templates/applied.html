@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI — My Applications{% endblock %}
+
+{% block extra_styles %}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.page-title{font-family:'Sora',sans-serif;font-size:1.55rem;font-weight:700;}
+.page-sub{color:var(--muted);font-size:.88rem;margin-top:.2rem;}
+
+/* Stats */
+.stats-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem;}
+.mini-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:1.2rem;text-align:center;}
+.mini-val{font-family:'Sora',sans-serif;font-size:1.7rem;font-weight:700;background:var(--grad-btn);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.mini-label{font-size:.74rem;color:var(--muted);margin-top:.25rem;font-weight:500;}
+
+/* Table card */
+.table-wrap{background:#fff;border:1px solid var(--border);border-radius:20px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:.87rem;}
+th{text-align:left;padding:.85rem 1.2rem;background:#fafafa;color:var(--muted);font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);}
+td{padding:.9rem 1.2rem;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafafa;}
+
+/* Status pills */
+.status-pill{padding:.28rem .75rem;border-radius:50px;font-size:.74rem;font-weight:600;display:inline-block;}
+.status-pill.applied,.status-pill.pending{background:#eff6ff;color:#3b82f6;}
+.status-pill.viewed{background:#fefce8;color:#ca8a04;}
+.status-pill.interview{background:#f0fdf4;color:#16a34a;}
+.status-pill.rejected,.status-pill.failed{background:#fef2f2;color:#ef4444;}
+
+/* Match bar in table */
+.t-match-wrap{display:flex;align-items:center;gap:.5rem;min-width:90px;}
+.t-match-bar{width:60px;height:5px;border-radius:50px;background:#ede9fe;overflow:hidden;}
+.t-match-fill{height:100%;border-radius:50px;background:var(--grad-btn);}
+.t-match-pct{font-size:.73rem;color:var(--purple);font-weight:700;}
+
+/* Source badge */
+.src-badge{padding:.18rem .55rem;border-radius:50px;font-size:.7rem;font-weight:500;background:#f5f3ff;color:var(--purple);}
+
+/* Company col */
+.company-cell{display:flex;align-items:center;gap:.75rem;}
+.co-logo{width:34px;height:34px;border-radius:9px;background:var(--grad1);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1px solid var(--border);}
+
+/* Empty */
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--muted);}
+.empty-icon{font-size:3rem;margin-bottom:1rem;}
+.empty-title{font-family:'Sora',sans-serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:.5rem;}
+
+/* Delete button */
+.del-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:.3rem .5rem;border-radius:8px;font-size:.85rem;transition:color .2s,background .2s;}
+.del-btn:hover{color:#ef4444;background:#fef2f2;}
+
+@media(max-width:768px){.stats-mini{grid-template-columns:1fr 1fr}table{font-size:.8rem}th,td{padding:.7rem .8rem}}
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">&#128140; My Applications</div>
+    <div class="page-sub">Track every job application you've submitted.</div>
+  </div>
+  <a href="{{ url_for('jobs.browse_jobs') }}" class="btn-primary">&#128269; Browse More Jobs</a>
+</div>
+
+<!-- Stats (use pre-computed stats dict from route) -->
+{% set total = applications|length %}
+
+{% if total %}
+<div class="stats-mini">
+  <div class="mini-card"><div class="mini-val">{{ stats.total or total }}</div><div class="mini-label">Total Applied</div></div>
+  <div class="mini-card"><div class="mini-val">{{ stats.interviews or 0 }}</div><div class="mini-label">Interviews</div></div>
+  <div class="mini-card"><div class="mini-val">{{ stats.viewed or 0 }}</div><div class="mini-label">Viewed</div></div>
+  <div class="mini-card"><div class="mini-val">{{ stats.rejected or 0 }}</div><div class="mini-label">Rejected</div></div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Role</th>
+        <th>Location</th>
+        <th>Match</th>
+        <th>Applied</th>
+        <th>Status</th>
+        <th>Link</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in applications %}
+      <tr>
+        <td>
+          <div class="company-cell">
+            <div class="co-logo">&#128188;</div>
+            <strong>{{ a.company or '—' }}</strong>
+          </div>
+        </td>
+        <td>{{ a.job_title or '—' }}</td>
+        <td>{{ a.location or 'Remote' }}</td>
+        <td>
+          <div class="t-match-wrap">
+            <div class="t-match-bar"><div class="t-match-fill" style="width:{{ a.match_score or 0 }}%"></div></div>
+            <span class="t-match-pct">{{ a.match_score or 0 }}%</span>
+          </div>
+        </td>
+        <td style="white-space:nowrap">{{ a.applied_fmt or '—' }}</td>
+        <td>
+          <span class="status-pill {{ (a.status or 'applied')|lower }}">
+            {{ (a.status or 'applied')|capitalize }}
+          </span>
+        </td>
+        <td>
+          {% if a.job_url and a.job_url != '#' %}
+          <a href="{{ a.job_url }}" target="_blank" style="color:var(--purple);font-size:.82rem;white-space:nowrap;">View &#8599;</a>
+          {% else %}
+          <span style="color:var(--muted)">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">&#128140;</div>
+  <div class="empty-title">No applications yet</div>
+  <p style="font-size:.88rem;margin-bottom:1.5rem;">Browse jobs and click Apply Now — or use Auto-Apply to bulk-apply to high-match roles.</p>
+  <div style="display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;">
+    <a href="{{ url_for('jobs.browse_jobs') }}" class="btn-primary">&#128269; Browse Jobs</a>
+    <a href="{{ url_for('apply.auto_apply_page') }}" class="btn-ghost">&#9889; Auto-Apply</a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

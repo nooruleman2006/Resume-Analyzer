@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Resume</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;color:#1a1a1a;font-size:9.5pt;line-height:1.6;background:#fff;}
+.page{width:210mm;min-height:297mm;margin:0 auto;padding:48px 52px;background:#fff;}
+.name{font-family:'DM Serif Display',serif;font-size:30pt;color:#111;letter-spacing:-0.5pt;line-height:1.1;margin-bottom:10px;}
+.tagline{font-size:9pt;color:#888;font-weight:300;letter-spacing:2pt;text-transform:uppercase;margin-bottom:14px;}
+.contact-row{display:flex;flex-wrap:wrap;gap:18px;font-size:8.5pt;color:#555;padding-bottom:18px;border-bottom:1px solid #e8e8e8;}
+.contact-row a{color:#555;text-decoration:none;}
+.section{margin-top:22px;}
+.sec-label{font-size:7.5pt;font-weight:600;letter-spacing:2.5pt;text-transform:uppercase;color:#aaa;margin-bottom:10px;}
+.rule{border:none;border-top:1px solid #e8e8e8;margin-bottom:14px;}
+.entry{display:flex;gap:24px;margin-bottom:14px;}
+.entry-left{width:110px;flex-shrink:0;font-size:8pt;color:#999;padding-top:1px;line-height:1.5;}
+.entry-right{flex:1;}
+.entry-title{font-weight:600;font-size:9.5pt;color:#111;margin-bottom:1px;}
+.entry-org{font-size:8.5pt;color:#666;margin-bottom:4px;}
+.entry-body{font-size:9pt;color:#444;line-height:1.55;}
+.entry-body ul{margin-left:14px;padding:0;}
+.entry-body li{margin-bottom:2px;}
+.skills-grid{display:flex;flex-wrap:wrap;gap:5px;}
+.skill{font-size:8pt;color:#333;border:1px solid #ddd;border-radius:2px;padding:2px 8px;}
+.langs{font-size:9pt;color:#444;}
+.langs span{margin-right:16px;}
+.two-col{display:flex;gap:32px;}
+.col{flex:1;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="name">{{ personal.name or '' }}</div>
+  <div class="contact-row">
+    {% if personal.email %}<span>{{ personal.email }}</span>{% endif %}
+    {% if personal.phone %}<span>{{ personal.phone }}</span>{% endif %}
+    {% if personal.location %}<span>{{ personal.location }}</span>{% endif %}
+    {% if personal.linkedin %}<span>{{ personal.linkedin }}</span>{% endif %}
+    {% if personal.portfolio %}<span>{{ personal.portfolio }}</span>{% endif %}
+  </div>
+
+  {% if summary %}
+  <div class="section">
+    <div class="sec-label">About</div>
+    <div class="entry-body">{{ summary }}</div>
+  </div>
+  {% endif %}
+
+  {% if experience %}
+  <div class="section">
+    <div class="sec-label">Experience</div>
+    {% for e in experience %}
+    <div class="entry">
+      <div class="entry-left">{{ e.start or '' }}<br>{% if e.end %}{{ e.end }}{% else %}Present{% endif %}</div>
+      <div class="entry-right">
+        <div class="entry-title">{{ e.role or '' }}</div>
+        <div class="entry-org">{{ e.company or '' }}</div>
+        {% if e.description %}<div class="entry-body"><ul>{% for line in e.description.split('\n') %}{% if line.strip() %}<li>{{ line.strip().lstrip('•').lstrip('-').strip() }}</li>{% endif %}{% endfor %}</ul></div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="two-col">
+    <div class="col">
+      {% if education %}
+      <div class="section">
+        <div class="sec-label">Education</div>
+        {% for e in education %}
+        <div class="entry">
+          <div class="entry-left">{{ e.year or '' }}</div>
+          <div class="entry-right">
+            <div class="entry-title">{% if e.degree %}{{ e.degree }}{% if e.field %} in {{ e.field }}{% endif %}{% else %}{{ e.field or '' }}{% endif %}</div>
+            <div class="entry-org">{{ e.institution or '' }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if projects %}
+      <div class="section">
+        <div class="sec-label">Projects</div>
+        {% for p in projects %}
+        <div class="entry">
+          <div class="entry-left"></div>
+          <div class="entry-right">
+            <div class="entry-title">{{ p.name or '' }}</div>
+            {% if p.technologies %}<div class="entry-org">{{ p.technologies }}</div>{% endif %}
+            {% if p.description %}<div class="entry-body">{{ p.description }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col">
+      {% if skills %}
+      <div class="section">
+        <div class="sec-label">Skills</div>
+        <div class="skills-grid">{% for s in skills %}<span class="skill">{{ s }}</span>{% endfor %}</div>
+      </div>
+      {% endif %}
+
+      {% if certifications %}
+      <div class="section">
+        <div class="sec-label">Certifications</div>
+        {% for c in certifications %}
+        <div class="entry-body" style="margin-bottom:4px;">{{ c.name or '' }}{% if c.org %} · {{ c.org }}{% endif %}{% if c.year %} · {{ c.year }}{% endif %}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if languages %}
+      <div class="section">
+        <div class="sec-label">Languages</div>
+        <div class="langs">{% for l in languages %}<span>{{ l.language }} <span style="color:#aaa;">({{ l.level }})</span></span>{% endfor %}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

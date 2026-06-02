@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Resume</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+body{font-family:'Inter',Arial,sans-serif;margin:0;padding:0;color:#1f2937;font-size:9.5pt;line-height:1.5;}
+.page{width:210mm;min-height:297mm;margin:0 auto;background:#fff;}
+.header{background:#1a1a2e;padding:22px 32px;position:relative;}
+.name{font-family:Georgia,'Times New Roman',serif;font-size:20pt;font-weight:700;color:#fff;margin-bottom:5px;}
+.contacts{display:flex;flex-wrap:wrap;gap:5px;}
+.chip{background:rgba(99,102,241,.28);border:1px solid rgba(99,102,241,.45);color:#c7d2fe;font-size:7.5pt;padding:2px 9px;border-radius:50px;}
+.ats-badge{position:absolute;top:16px;right:22px;background:#14b8a6;color:#fff;font-size:7.5pt;font-weight:700;padding:3px 9px;border-radius:50px;}
+.content{display:flex;min-height:230mm;}
+.sidebar{background:#0f0f23;width:72mm;padding:14px 14px 14px 16px;box-sizing:border-box;}
+.main{flex:1;padding:14px 22px;box-sizing:border-box;}
+.sec-side{font-size:7pt;font-weight:700;letter-spacing:1pt;text-transform:uppercase;color:#14b8a6;margin-top:14px;margin-bottom:5px;border-bottom:1px solid rgba(20,184,166,.25);padding-bottom:2px;}
+.sec-main{font-size:7.5pt;font-weight:700;letter-spacing:1pt;text-transform:uppercase;color:#6366f1;margin-top:14px;margin-bottom:5px;border-bottom:2px solid #6366f1;padding-bottom:2px;}
+.skill-chip{display:inline-block;font-size:7pt;font-weight:600;padding:2px 7px;border-radius:12px;margin:2px 2px;}
+.sk-tech{background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);}
+.sk-fw{background:rgba(20,184,166,.15);color:#14b8a6;border:1px solid rgba(20,184,166,.3);}
+.sk-tool{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);}
+.sk-soft{background:rgba(236,72,153,.15);color:#ec4899;border:1px solid rgba(236,72,153,.3);}
+.edu-inst{font-size:8.5pt;font-weight:700;color:#e5e7eb;}
+.edu-deg{font-size:8pt;color:#9ca3af;margin-top:1px;}
+.lang-row{display:flex;align-items:center;justify-content:space-between;font-size:8pt;color:#d1d5db;margin-bottom:2px;}
+.lang-bar{height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;margin-bottom:5px;}
+.lang-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#6366f1,#14b8a6);}
+.exp-card{border-left:3px solid #6366f1;padding-left:10px;margin-bottom:10px;}
+.exp-role{font-weight:700;font-size:9.5pt;color:#1f2937;}
+.exp-co{font-size:8.5pt;color:#6366f1;font-weight:600;}
+.date-badge{display:inline-block;background:#ede9fe;color:#6366f1;font-size:7pt;font-weight:700;padding:1px 5px;border-radius:3px;margin:2px 0;}
+.exp-desc{font-size:8.5pt;color:#374151;margin-top:3px;}
+.exp-desc ul{margin:3px 0 0 14px;padding:0;}
+.exp-desc li{margin-bottom:1px;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="name">{{ personal.name or '' }}</div>
+    <div class="contacts">
+      {% if personal.email %}<span class="chip">{{ personal.email }}</span>{% endif %}
+      {% if personal.phone %}<span class="chip">{{ personal.phone }}</span>{% endif %}
+      {% if personal.location %}<span class="chip">{{ personal.location }}</span>{% endif %}
+      {% if personal.linkedin %}<span class="chip">{{ personal.linkedin }}</span>{% endif %}
+      {% if personal.portfolio %}<span class="chip">{{ personal.portfolio }}</span>{% endif %}
+    </div>
+    <div class="ats-badge">ATS 92%</div>
+  </div>
+  <div class="content">
+    <div class="sidebar">
+      {% if skills %}
+      <div class="sec-side">Skills</div>
+      {% for s in skills %}
+      <span class="skill-chip sk-{{ ['tech','fw','tool','soft'][loop.index0 % 4] }}">{{ s }}</span>
+      {% endfor %}
+      {% endif %}
+
+      {% if education %}
+      <div class="sec-side">Education</div>
+      {% for e in education %}
+      <div class="edu-inst">{{ e.institution or '' }}</div>
+      <div class="edu-deg">{% if e.degree %}{{ e.degree }}{% if e.field %} in {{ e.field }}{% endif %}{% else %}{{ e.field or '' }}{% endif %}{% if e.year %} · {{ e.year }}{% endif %}</div>
+      <div style="margin-bottom:4px;"></div>
+      {% endfor %}
+      {% endif %}
+
+      {% if languages %}
+      <div class="sec-side">Languages</div>
+      {% for l in languages %}
+      <div class="lang-row"><span>{{ l.language }}</span><span style="font-size:6.5pt;color:#9ca3af;">{{ l.level }}</span></div>
+      <div class="lang-bar"><div class="lang-fill" style="width:{{ {'Native':100,'Fluent':90,'Advanced':75,'Intermediate':55,'Basic':35}.get(l.level,60) }}%"></div></div>
+      {% endfor %}
+      {% endif %}
+
+      {% if certifications %}
+      <div class="sec-side">Certifications</div>
+      {% for c in certifications %}
+      <div style="font-size:7.5pt;color:#d1d5db;margin-bottom:3px;">{{ c.name or '' }}{% if c.org %}<br><span style="color:#9ca3af;font-size:6.5pt;">{{ c.org }}</span>{% endif %}</div>
+      {% endfor %}
+      {% endif %}
+    </div>
+    <div class="main">
+      {% if summary %}
+      <div class="sec-main">Summary</div>
+      <div style="font-size:8.5pt;color:#374151;line-height:1.65;">{{ summary }}</div>
+      {% endif %}
+
+      {% if experience %}
+      <div class="sec-main">Experience</div>
+      {% for e in experience %}
+      <div class="exp-card">
+        <div class="exp-role">{{ e.role or '' }}</div>
+        <div class="exp-co">{{ e.company or '' }}</div>
+        {% if e.start or e.end %}<div class="date-badge">{{ e.start or '' }} – {{ e.end or 'Present' }}</div>{% endif %}
+        {% if e.description %}
+        <div class="exp-desc"><ul>{% for line in e.description.split('\n') %}{% if line.strip() %}<li>{{ line.strip().lstrip('•').lstrip('-').strip() }}</li>{% endif %}{% endfor %}</ul></div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      {% if projects %}
+      <div class="sec-main">Projects</div>
+      {% for p in projects %}
+      <div class="exp-card" style="border-left-color:#14b8a6;">
+        <div class="exp-role">{{ p.name or '' }}</div>
+        {% if p.technologies %}<div style="font-size:7.5pt;color:#14b8a6;font-weight:600;">{{ p.technologies }}</div>{% endif %}
+        {% if p.description %}<div class="exp-desc">{{ p.description }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

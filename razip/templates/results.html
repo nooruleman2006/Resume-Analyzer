@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI — Analysis Results{% endblock %}
+
+{% block extra_styles %}
+.page-title{font-family:'Sora',sans-serif;font-size:1.55rem;font-weight:700;}
+.page-sub{color:var(--muted);font-size:.88rem;margin-top:.25rem;margin-bottom:2rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+.page-sub span{color:var(--border);font-size:1rem;}
+
+/* Score rings row */
+.top-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-bottom:2rem;}
+.score-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:1.8rem;text-align:center;}
+.score-label{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.09em;margin-bottom:.8rem;}
+.ring-outer{width:110px;height:110px;border-radius:50%;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(167,139,250,.18);}
+.ring-inner{width:78px;height:78px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.ring-val{font-family:'Sora',sans-serif;font-size:1.4rem;font-weight:700;}
+.ring-sub{font-size:.6rem;color:var(--muted);}
+.score-desc{font-size:.8rem;color:var(--muted);line-height:1.5;}
+.score-desc strong{color:var(--text);}
+
+/* Main grid */
+.analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+.card-title{font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;margin-bottom:1.2rem;display:flex;align-items:center;gap:.6rem;}
+
+/* Suggestions */
+.suggestion-item{display:flex;gap:.9rem;padding:.9rem 0;border-bottom:1px solid var(--border);}
+.suggestion-item:last-child{border-bottom:none;}
+.sug-icon{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;}
+.sug-improve{background:linear-gradient(135deg,rgba(244,114,182,.1),rgba(167,139,250,.1));}
+.sug-add{background:#f0fdf4;}
+.sug-remove{background:#fef2f2;}
+.sug-body{flex:1;}
+.sug-heading{font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;}
+.sug-text{font-size:.82rem;color:var(--muted);line-height:1.6;}
+
+/* Skills */
+.skill-tags{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:.9rem;}
+.tag{padding:.28rem .75rem;border-radius:50px;font-size:.76rem;font-weight:500;}
+.tag-present{background:linear-gradient(135deg,rgba(244,114,182,.08),rgba(167,139,250,.12));color:var(--purple);}
+.tag-missing{background:#fef2f2;color:#ef4444;border:1px dashed #fecaca;}
+.tag-section-label{font-size:.72rem;color:var(--muted);margin-bottom:.45rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;}
+
+/* Score bars */
+.meter-wrap{margin-bottom:.85rem;}
+.meter-label{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted);margin-bottom:.3rem;}
+.meter-label strong{color:var(--text);}
+.meter-bar{height:8px;border-radius:50px;background:#ede9fe;overflow:hidden;}
+.meter-fill{height:100%;border-radius:50px;transition:width .6s ease;}
+.fill-high{background:linear-gradient(90deg,#a78bfa,#60a5fa);}
+.fill-mid{background:linear-gradient(90deg,#fbbf24,#f59e0b);}
+.fill-low{background:linear-gradient(90deg,#f87171,#ef4444);}
+
+/* AI Summary */
+.summary-box{font-size:.9rem;color:var(--text);line-height:1.75;background:linear-gradient(135deg,#fce4f3 0%,#ede9fe 100%);padding:1.3rem 1.5rem;border-radius:14px;border-left:4px solid var(--purple);}
+
+/* Strengths / weaknesses / roles */
+.list-item{display:flex;align-items:flex-start;gap:.65rem;padding:.55rem 0;font-size:.87rem;color:var(--muted);border-bottom:1px solid var(--border);}
+.list-item:last-child{border-bottom:none;}
+.list-dot{width:8px;height:8px;border-radius:50%;margin-top:.35rem;flex-shrink:0;}
+.dot-green{background:#16a34a;}
+.dot-red{background:#ef4444;}
+.dot-purple{background:var(--purple);}
+
+/* Roles */
+.role-chip{display:inline-flex;align-items:center;gap:.5rem;padding:.45rem 1rem;background:var(--grad1);border-radius:50px;font-size:.82rem;font-weight:500;color:var(--text);margin:.25rem;}
+
+/* Actions */
+.actions-row{display:flex;gap:.85rem;flex-wrap:wrap;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);}
+
+/* AI badge */
+.ai-tag{display:inline-flex;align-items:center;gap:.35rem;padding:.22rem .75rem;border-radius:50px;font-size:.72rem;font-weight:600;background:linear-gradient(135deg,rgba(244,114,182,.15),rgba(167,139,250,.18));color:var(--purple);}
+.no-ai-note{font-size:.8rem;color:var(--muted);background:#fafafa;border:1px dashed var(--border);border-radius:10px;padding:.65rem 1rem;margin-bottom:1rem;}
+
+@media(max-width:1000px){.top-row{grid-template-columns:1fr 1fr}.analysis-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.top-row{grid-template-columns:1fr}}
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="page-title">&#128202; Resume Analysis Report</div>
+<p class="page-sub">
+  <span style="font-size:.88rem;color:var(--text);">{{ resume.filename }}</span>
+  <span>·</span>
+  <span>Analyzed {{ upload_date }}</span>
+  {% if resume.job_title %}
+  <span>·</span>
+  <span>Target: <strong>{{ resume.job_title }}</strong></span>
+  {% endif %}
+  {% if summary %}<span class="ai-tag">&#129302; AI Enhanced</span>{% endif %}
+</p>
+
+<!-- ── Score Rings ─────────────────────────────────────────── -->
+<div class="top-row">
+
+  <!-- ATS Score -->
+  <div class="score-card">
+    <div class="score-label">Overall ATS Score</div>
+    {% set sc = score %}
+    <div class="ring-outer" style="background:conic-gradient(
+        {% if sc >= 70 %}#a78bfa{% elif sc >= 50 %}#fbbf24{% else %}#f87171{% endif %}
+        0% {{ sc }}%, #ede9fe {{ sc }}% 100%);">
+      <div class="ring-inner">
+        <div class="ring-val" style="color:{% if sc >= 70 %}var(--purple){% elif sc >= 50 %}#ca8a04{% else %}#ef4444{% endif %}">{{ sc }}%</div>
+        <div class="ring-sub">ATS</div>
+      </div>
+    </div>
+    <p class="score-desc">
+      {% if sc >= 70 %}<strong style="color:#16a34a">Above Average</strong> — Passes most ATS filters.
+      {% elif sc >= 50 %}<strong style="color:#ca8a04">Average</strong> — Some improvements needed.
+      {% else %}<strong style="color:#ef4444">Needs Work</strong> — Follow the suggestions below.
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- Readability -->
+  <div class="score-card">
+    <div class="score-label">Readability</div>
+    {% set rd = readability %}
+    <div class="ring-outer" style="background:conic-gradient(#60a5fa 0% {{ rd }}%,#dbeafe {{ rd }}% 100%);">
+      <div class="ring-inner">
+        <div class="ring-val" style="color:#3b82f6">{{ rd }}%</div>
+        <div class="ring-sub">Read</div>
+      </div>
+    </div>
+    <p class="score-desc">
+      {% if rd >= 70 %}<strong>Clear &amp; concise</strong> — Easy to scan quickly.
+      {% elif rd >= 50 %}<strong>Moderate</strong> — Shorten some sentences.
+      {% else %}<strong>Dense</strong> — Break up long paragraphs.
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- Keyword Match -->
+  <div class="score-card">
+    <div class="score-label">Keyword Match</div>
+    {% set kw = keyword_score %}
+    <div class="ring-outer" style="background:conic-gradient(#f472b6 0% {{ kw }}%,#fce4f3 {{ kw }}% 100%);">
+      <div class="ring-inner">
+        <div class="ring-val" style="color:var(--pink)">{{ kw }}%</div>
+        <div class="ring-sub">Keywords</div>
+      </div>
+    </div>
+    <p class="score-desc">
+      {% if resume.job_title or resume.job_description %}
+        {% if kw >= 70 %}<strong>Strong match</strong> — Great keyword alignment.
+        {% elif kw >= 40 %}<strong>Partial match</strong> — Add more JD keywords.
+        {% else %}<strong>Low match</strong> — Tailor resume to job description.
+        {% endif %}
+      {% else %}
+        <strong>No JD provided</strong> — Upload with a job description for a match score.
+      {% endif %}
+    </p>
+  </div>
+
+</div>
+
+<!-- ── AI Summary ─────────────────────────────────────────── -->
+{% if summary %}
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-title">&#128221; AI Summary</div>
+  <div class="summary-box">{{ summary }}</div>
+</div>
+{% endif %}
+
+<!-- ── Main Analysis Grid ─────────────────────────────────── -->
+<div class="analysis-grid">
+
+  <!-- AI Suggestions -->
+  <div class="card">
+    <div class="card-title">&#128161; AI Suggestions</div>
+    {% if not summary %}
+    <div class="no-ai-note">&#9432; AI key not configured — showing generic tips. <a href="{{ url_for('settings.settings_page') }}" style="color:var(--purple)">Add your Gemini key →</a></div>
+    {% endif %}
+    {% if suggestions %}
+      {% for s in suggestions %}
+      <div class="suggestion-item">
+        <div class="sug-icon sug-{{ s.type if s.type in ['improve','add','remove'] else 'improve' }}">{{ s.icon }}</div>
+        <div class="sug-body">
+          <div class="sug-heading">{{ s.heading }}</div>
+          <div class="sug-text">{{ s.text }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p style="font-size:.88rem;color:var(--muted);">No suggestions available.</p>
+    {% endif %}
+  </div>
+
+  <!-- Score Breakdown -->
+  <div class="card">
+    <div class="card-title">&#128202; Score Breakdown</div>
+    {% for label, val in breakdown %}
+    {% set val = val | int %}
+    <div class="meter-wrap">
+      <div class="meter-label">
+        <strong>{{ label }}</strong>
+        <span>{{ val }}%</span>
+      </div>
+      <div class="meter-bar">
+        <div class="meter-fill {% if val >= 70 %}fill-high{% elif val >= 45 %}fill-mid{% else %}fill-low{% endif %}"
+             style="width:{{ val }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Skills quick view -->
+    {% if present_skills %}
+    <div style="margin-top:1.4rem;">
+      <div class="tag-section-label">&#10003; Skills Detected ({{ present_skills|length }})</div>
+      <div class="skill-tags">
+        {% for s in present_skills[:12] %}<span class="tag tag-present">{{ s }}</span>{% endfor %}
+        {% if present_skills|length > 12 %}<span class="tag" style="background:#f3f4f6;color:var(--muted);">+{{ present_skills|length - 12 }} more</span>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ── Skills & Roles ─────────────────────────────────────── -->
+<div class="analysis-grid" style="margin-bottom:1.5rem;">
+
+  <!-- Missing Skills -->
+  <div class="card">
+    <div class="card-title">&#9888;&#65039; Missing Keywords</div>
+    {% if missing_skills %}
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.9rem;">Add these to better match the target role and pass ATS filters.</p>
+      <div class="skill-tags">
+        {% for s in missing_skills %}<span class="tag tag-missing">{{ s }}</span>{% endfor %}
+      </div>
+    {% else %}
+      <p style="font-size:.88rem;color:#16a34a;">&#10003; No critical keywords missing — great coverage!</p>
+    {% endif %}
+  </div>
+
+  <!-- Suitable Roles -->
+  <div class="card">
+    <div class="card-title">&#127775; Suitable Roles</div>
+    {% if suitable_roles %}
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.9rem;">Based on your skills and experience, you're a strong fit for:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;">
+        {% for role in suitable_roles %}
+        <a href="{{ url_for('jobs.browse_jobs') }}?q={{ role | urlencode }}" class="role-chip">
+          &#128269; {{ role }}
+        </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="font-size:.88rem;color:var(--muted);">Add a Gemini API key to get personalised role suggestions.</p>
+      <a href="{{ url_for('settings.settings_page') }}" class="btn-primary" style="margin-top:1rem;display:inline-block;font-size:.82rem;">Configure AI →</a>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ── Strengths & Weaknesses ────────────────────────────── -->
+{% if strengths or weaknesses %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+  <div class="card">
+    <div class="card-title">&#9989; Strengths</div>
+    {% if strengths %}
+      {% for s in strengths %}
+      <div class="list-item"><div class="list-dot dot-green"></div>{{ s }}</div>
+      {% endfor %}
+    {% else %}
+      <p style="font-size:.88rem;color:var(--muted);">—</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="card-title">&#128736;&#65039; Areas to Improve</div>
+    {% if weaknesses %}
+      {% for w in weaknesses %}
+      <div class="list-item"><div class="list-dot dot-red"></div>{{ w }}</div>
+      {% endfor %}
+    {% else %}
+      <p style="font-size:.88rem;color:var(--muted);">—</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Interview Prep CTA ──────────────────────────────────── -->
+<div class="card" style="margin-top:1.5rem;background:linear-gradient(135deg,#fce4f3 0%,#ede9fe 60%,#dbeafe 100%);border:none;">
+  <div style="display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;">
+    <div style="font-size:2rem;flex-shrink:0;">🎤</div>
+    <div style="flex:1;min-width:200px;">
+      <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:1rem;margin-bottom:.25rem;">Ready to practice for interviews?</div>
+      <div style="font-size:.84rem;color:var(--muted);">Gemini generates personalised questions from your resume and evaluates your answers with detailed feedback.</div>
+    </div>
+    <a href="{{ url_for('interview.interview_prep') }}" class="btn-primary" style="flex-shrink:0;">🎤 Start Interview Prep →</a>
+  </div>
+</div>
+
+<!-- ── Action Buttons ─────────────────────────────────────── -->
+<div class="actions-row">
+  <a href="{{ url_for('jobs.browse_jobs') }}" class="btn-primary">&#128269; Browse Matched Jobs</a>
+  <a href="{{ url_for('apply.auto_apply_page') }}" class="btn-primary">&#9889; Auto-Apply</a>
+  <a href="{{ url_for('resume.upload') }}" class="btn-ghost">&#128196; Upload New Resume</a>
+  <a href="{{ url_for('main.dashboard') }}" class="btn-ghost">&#8592; Dashboard</a>
+</div>
+
+{% endblock %}

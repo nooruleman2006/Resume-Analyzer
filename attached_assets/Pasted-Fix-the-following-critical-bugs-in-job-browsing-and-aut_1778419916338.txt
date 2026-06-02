@@ -1,0 +1,44 @@
+Fix the following critical bugs in job browsing and auto apply:
+
+BUG 1 — Adzuna keys not being detected:
+The jobs page shows "X Adzuna — add ADZUNA_APP_ID & KEY" even though 
+these keys are already added in Replit Secrets. Fix this by:
+- In services/job_fetcher.py, make sure Adzuna keys are read using 
+  os.getenv('ADZUNA_APP_ID') and os.getenv('ADZUNA_APP_KEY')
+- In config.py verify ADZUNA_APP_ID and ADZUNA_APP_KEY are loaded 
+  from environment variables
+- Fix the status check in jobs page that shows whether Adzuna is 
+  active — it should show ✓ if keys exist in environment
+- Use Adzuna GB endpoint (api.adzuna.com/v1/api/jobs/gb/search/1) 
+  with "pakistan" or "remote" as location filter since PK endpoint 
+  is not supported
+
+BUG 2 — Add JSearch RapidAPI for Pakistan jobs:
+- Add JSearch integration in services/job_fetcher.py
+- API endpoint: https://jsearch.p.rapidapi.com/search
+- Read key from os.getenv('RAPIDAPI_KEY')
+- Search query should include "Pakistan" as location
+- Show ✓ JSearch active when RAPIDAPI_KEY is present in environment
+
+BUG 3 — Auto Apply always shows 0 matched jobs:
+In services/job_matcher.py and routes/apply_routes.py:
+- Fix the job matching algorithm — it is not matching any jobs 
+  against the resume skills
+- The match score should compare resume skills against job 
+  description keywords
+- Jobs with match score above the threshold should be counted 
+  and shown
+- Fix the threshold slider so it correctly filters and counts 
+  eligible jobs
+
+BUG 4 — Wrong resume used in Auto Apply:
+Auto Apply is showing "Sofia_Martinez_Resume.pdf" which is a dummy/
+test resume. Fix this by:
+- Always use the actual logged-in user's most recently uploaded 
+  resume for matching and auto apply
+- Remove all hardcoded dummy resume references from the codebase
+- If user has no resume uploaded, redirect to upload page with 
+  message "Please upload your resume first"
+
+Please fix all 4 bugs and make sure Adzuna shows as active after 
+the fix since keys are already in Replit Secrets.

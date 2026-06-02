@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI — AI-Powered Resume Analyzer{% endblock %}
+
+{% block extra_styles %}
+/* ── Landing: no sidebar needed ── */
+body { background: var(--grad1); }
+.main { margin-left: 0 !important; padding: 0; }
+
+/* ── Nav ── */
+.landing-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.4rem 6%; max-width: 1200px; margin: 0 auto;
+}
+.nav-logo {
+  font-family: 'Sora', sans-serif; font-weight: 700; font-size: 1.3rem;
+  background: var(--grad-btn); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.nav-actions { display: flex; gap: 1rem; align-items: center; }
+
+/* ── Hero ── */
+.hero {
+  text-align: center; padding: 5rem 2rem 3rem;
+  max-width: 820px; margin: 0 auto;
+  animation: fadeUp .7s ease both;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+.hero-badge {
+  display: inline-block; padding: .35rem .9rem; border-radius: 50px;
+  background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.25);
+  color: var(--purple); font-size: .78rem; font-weight: 600;
+  letter-spacing: .06em; margin-bottom: 1.8rem;
+}
+.hero h1 {
+  font-family: 'Sora', sans-serif; font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 700; line-height: 1.2; color: var(--text);
+  margin-bottom: 1.2rem;
+}
+.hero h1 span {
+  background: var(--grad-btn); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero p {
+  font-size: 1rem; color: var(--muted); line-height: 1.75;
+  max-width: 600px; margin: 0 auto 2.5rem;
+}
+.hero-cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.btn-hero {
+  padding: .85rem 2.2rem; border-radius: 50px;
+  background: var(--grad-btn); color: #fff; font-family: 'DM Sans', sans-serif;
+  font-size: .97rem; font-weight: 600; text-decoration: none;
+  box-shadow: 0 8px 28px rgba(167,139,250,.32);
+  transition: opacity .2s, transform .2s;
+}
+.btn-hero:hover { opacity: .9; transform: translateY(-2px); }
+.btn-hero-ghost {
+  padding: .85rem 2.2rem; border-radius: 50px;
+  border: 1.5px solid rgba(167,139,250,.3); background: rgba(255,255,255,.7);
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: .97rem; font-weight: 500; text-decoration: none;
+  transition: border-color .2s, background .2s;
+}
+.btn-hero-ghost:hover { border-color: var(--purple); background: #fff; }
+
+/* ── Stats bar ── */
+.stats-bar {
+  display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap;
+  padding: 2rem 2rem 0; max-width: 700px; margin: 0 auto;
+  animation: fadeUp .8s ease .15s both;
+}
+.stat { text-align: center; }
+.stat-num {
+  font-family: 'Sora', sans-serif; font-size: 1.7rem; font-weight: 700;
+  background: var(--grad-btn); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.stat-label { font-size: .78rem; color: var(--muted); margin-top: .2rem; }
+
+/* ── Feature cards ── */
+.features {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.4rem; max-width: 1000px; margin: 4rem auto; padding: 0 2rem;
+  animation: fadeUp .9s ease .2s both;
+}
+.feat-card {
+  background: rgba(255,255,255,.85); backdrop-filter: blur(12px);
+  border: 1px solid var(--border); border-radius: 22px;
+  padding: 1.8rem 1.6rem;
+  transition: transform .2s, box-shadow .2s;
+}
+.feat-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(167,139,250,.13); }
+.feat-icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: var(--grad1); display: flex; align-items: center;
+  justify-content: center; font-size: 1.4rem; margin-bottom: 1.1rem;
+  border: 1px solid var(--border);
+}
+.feat-title {
+  font-family: 'Sora', sans-serif; font-size: .97rem; font-weight: 700;
+  margin-bottom: .5rem;
+}
+.feat-desc { font-size: .85rem; color: var(--muted); line-height: 1.65; }
+
+/* ── How it works ── */
+.how-section {
+  max-width: 820px; margin: 0 auto 5rem; padding: 0 2rem;
+  text-align: center; animation: fadeUp .9s ease .3s both;
+}
+.section-title {
+  font-family: 'Sora', sans-serif; font-size: 1.6rem; font-weight: 700;
+  margin-bottom: .5rem;
+}
+.section-sub { color: var(--muted); font-size: .9rem; margin-bottom: 3rem; }
+.steps {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem; text-align: left;
+}
+.step {
+  background: rgba(255,255,255,.85); border: 1px solid var(--border);
+  border-radius: 20px; padding: 1.5rem;
+}
+.step-num {
+  font-family: 'Sora', sans-serif; font-size: 1.8rem; font-weight: 700;
+  background: var(--grad-btn); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; margin-bottom: .6rem;
+}
+.step-title { font-weight: 600; font-size: .92rem; margin-bottom: .35rem; }
+.step-desc  { font-size: .82rem; color: var(--muted); line-height: 1.6; }
+
+/* ── CTA Banner ── */
+.cta-banner {
+  background: var(--grad-btn); border-radius: 28px;
+  padding: 3rem 2.5rem; text-align: center;
+  max-width: 740px; margin: 0 auto 5rem;
+  box-shadow: 0 20px 60px rgba(167,139,250,.28);
+  animation: fadeUp .9s ease .35s both;
+}
+.cta-banner h2 {
+  font-family: 'Sora', sans-serif; font-size: 1.7rem;
+  font-weight: 700; color: #fff; margin-bottom: .6rem;
+}
+.cta-banner p { color: rgba(255,255,255,.85); margin-bottom: 1.8rem; font-size: .92rem; }
+.btn-white {
+  display: inline-block; padding: .85rem 2.4rem; border-radius: 50px;
+  background: #fff; color: var(--purple); font-family: 'DM Sans', sans-serif;
+  font-size: .97rem; font-weight: 700; text-decoration: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,.12);
+  transition: transform .2s, box-shadow .2s;
+}
+.btn-white:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.18); }
+{% endblock %}
+
+{% block content %}
+
+<!-- Nav -->
+<nav class="landing-nav">
+  <div class="nav-logo">ResumeAI</div>
+  <div class="nav-actions">
+    <a href="{{ url_for('auth.login') }}" class="btn-ghost">Log In</a>
+    <a href="{{ url_for('auth.register') }}" class="btn-primary">Get Started Free</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">&#127381; Powered by Gemini AI</div>
+  <h1>Get Your Resume <span>ATS-Ready</span> in Seconds</h1>
+  <p>Upload your resume and receive an instant AI score, keyword gap analysis, matched job listings, and one-click auto-apply — all in one place.</p>
+  <div class="hero-cta">
+    <a href="{{ url_for('auth.register') }}" class="btn-hero">&#129302; Analyze My Resume Free</a>
+    <a href="{{ url_for('auth.login') }}" class="btn-hero-ghost">Log In</a>
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num">92%</div><div class="stat-label">Average ATS pass rate after fixes</div></div>
+  <div class="stat"><div class="stat-num">+22%</div><div class="stat-label">Score improvement per upload</div></div>
+  <div class="stat"><div class="stat-num">3 sec</div><div class="stat-label">Time to full AI analysis</div></div>
+</div>
+
+<!-- Feature Cards -->
+<div class="features">
+  <div class="feat-card">
+    <div class="feat-icon">&#128200;</div>
+    <div class="feat-title">ATS Score Analysis</div>
+    <p class="feat-desc">Instant keyword matching against your target job. Know exactly which skills ATS systems are looking for.</p>
+  </div>
+  <div class="feat-card">
+    <div class="feat-icon">&#129302;</div>
+    <div class="feat-title">Gemini AI Feedback</div>
+    <p class="feat-desc">Get actionable suggestions on structure, phrasing, and impact — written by AI trained on thousands of successful resumes.</p>
+  </div>
+  <div class="feat-card">
+    <div class="feat-icon">&#128269;</div>
+    <div class="feat-title">Smart Job Matching</div>
+    <p class="feat-desc">Jobs ranked by how well they match your resume skills — from Adzuna, Remotive, and Rozee.pk.</p>
+  </div>
+  <div class="feat-card">
+    <div class="feat-icon">&#9889;</div>
+    <div class="feat-title">Auto-Apply</div>
+    <p class="feat-desc">Apply to matched jobs on LinkedIn and Rozee.pk automatically. Track every application in your personal dashboard.</p>
+  </div>
+</div>
+
+<!-- How It Works -->
+<section class="how-section">
+  <div class="section-title">How It Works</div>
+  <p class="section-sub">Four steps from upload to hired.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">Upload Your Resume</div>
+      <p class="step-desc">PDF, DOCX, or DOC. Paste an optional job description for precision scoring.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">Get Your ATS Score</div>
+      <p class="step-desc">See keyword coverage, readability, and a full score breakdown instantly.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">Read AI Suggestions</div>
+      <p class="step-desc">Gemini flags missing skills, weak sections, and gives concrete rewrites.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-title">Apply with One Click</div>
+      <p class="step-desc">Browse matched jobs and let auto-apply handle LinkedIn and Rozee for you.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Banner -->
+<div class="cta-banner" style="padding: 0 2rem; box-sizing: border-box;">
+  <div style="background:var(--grad-btn);border-radius:28px;padding:3rem 2.5rem;">
+    <h2>Ready to land your next role?</h2>
+    <p>Join thousands of job seekers who improved their ATS score with ResumeAI.</p>
+    <a href="{{ url_for('auth.register') }}" class="btn-white">Start for Free — No Credit Card</a>
+  </div>
+</div>
+
+{% endblock %}

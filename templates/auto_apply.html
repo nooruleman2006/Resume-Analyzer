@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI — Auto-Apply{% endblock %}
+
+{% block extra_styles %}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem;}
+.page-title{font-family:'Sora',sans-serif;font-size:1.55rem;font-weight:700;}
+.page-sub{color:var(--muted);font-size:.88rem;margin-top:.2rem;}
+.aa-layout{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start;}
+
+/* Control panel */
+.control-card{background:#fff;border:1px solid var(--border);border-radius:22px;padding:1.8rem;margin-bottom:1.5rem;}
+.ctrl-title{font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;margin-bottom:1.2rem;}
+.match-row{display:flex;align-items:center;gap:1rem;margin-bottom:.6rem;}
+.match-row input[type=range]{flex:1;accent-color:var(--purple);cursor:pointer;}
+.match-val{font-weight:700;color:var(--purple);min-width:42px;font-family:'Sora',sans-serif;}
+.ctrl-meta{font-size:.82rem;color:var(--muted);margin-bottom:1.2rem;}
+.ctrl-meta strong{color:var(--purple);}
+.btn-go{width:100%;padding:.88rem;background:var(--grad-btn);color:#fff;border:none;border-radius:14px;
+  font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;
+  box-shadow:0 6px 20px rgba(167,139,250,.3);transition:opacity .2s,transform .2s;
+  display:flex;align-items:center;justify-content:center;gap:.6rem;}
+.btn-go:hover{opacity:.9;transform:translateY(-1px);}
+.btn-go:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+/* Matched jobs list */
+.jobs-list-title{font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.6rem;}
+.job-row{display:flex;align-items:center;gap:1rem;padding:.9rem 1.1rem;background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:.6rem;transition:box-shadow .2s;}
+.job-row:hover{box-shadow:0 4px 16px rgba(167,139,250,.1);}
+.jr-logo{width:40px;height:40px;border-radius:10px;background:var(--grad1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.jr-info{flex:1;min-width:0;}
+.jr-title{font-size:.9rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.jr-company{font-size:.78rem;color:var(--muted);margin-top:.1rem;}
+.jr-match{text-align:right;flex-shrink:0;}
+.jr-pct{font-family:'Sora',sans-serif;font-size:1rem;font-weight:700;color:var(--purple);}
+.jr-lbl{font-size:.65rem;color:var(--muted);}
+.jr-applied{font-size:.72rem;font-weight:600;color:#16a34a;background:#f0fdf4;border-radius:50px;padding:.2rem .6rem;}
+.ineligible{opacity:.4;}
+
+/* Sidebar */
+.side-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:1.5rem;margin-bottom:1.2rem;}
+.side-title{font-family:'Sora',sans-serif;font-size:.92rem;font-weight:700;margin-bottom:1rem;}
+.how-step{display:flex;gap:.75rem;padding:.55rem 0;border-bottom:1px solid var(--border);font-size:.83rem;color:var(--muted);line-height:1.5;}
+.how-step:last-child{border-bottom:none;}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--grad-btn);color:#fff;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.1rem;}
+.resume-pill{display:flex;align-items:center;gap:.75rem;padding:.8rem;background:var(--grad1);border-radius:12px;border:1px solid var(--border);margin-bottom:1.2rem;}
+.rp-icon{font-size:1.4rem;}
+.rp-name{font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rp-date{font-size:.72rem;color:var(--muted);}
+
+/* Results */
+.results-header{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.r-stat{background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.4rem;text-align:center;flex:1;min-width:100px;}
+.r-stat-num{font-family:'Sora',sans-serif;font-size:1.6rem;font-weight:700;background:var(--grad-btn);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.r-stat-lbl{font-size:.72rem;color:var(--muted);margin-top:.2rem;}
+.result-row{display:flex;align-items:center;gap:1rem;padding:.9rem 1.1rem;background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:.6rem;}
+.rr-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.rr-ok{background:#f0fdf4;color:#16a34a;}
+.rr-fail{background:#fef2f2;color:#ef4444;}
+.rr-info{flex:1;}
+.rr-title{font-size:.9rem;font-weight:600;}
+.rr-msg{font-size:.75rem;color:var(--muted);margin-top:.15rem;}
+.rr-badge{font-size:.73rem;font-weight:600;padding:.22rem .65rem;border-radius:50px;white-space:nowrap;}
+.rr-badge.ok{background:#f0fdf4;color:#16a34a;}
+.rr-badge.fail{background:#fef2f2;color:#ef4444;}
+
+@media(max-width:900px){.aa-layout{grid-template-columns:1fr}}
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">&#9889; Auto-Apply</div>
+    <div class="page-sub">Bulk-apply to all high-match jobs with a single click.</div>
+  </div>
+  {% if results is not none %}
+  <a href="{{ url_for('apply.auto_apply_page') }}" class="btn-ghost">&#9889; Run Again</a>
+  {% endif %}
+</div>
+
+{% if results is not none %}
+<!-- ──────────── RESULTS VIEW ──────────── -->
+<div class="results-header">
+  <div class="r-stat"><div class="r-stat-num">{{ applied_count }}</div><div class="r-stat-lbl">Applied</div></div>
+  <div class="r-stat"><div class="r-stat-num">{{ results|length }}</div><div class="r-stat-lbl">Attempted</div></div>
+  <div class="r-stat"><div class="r-stat-num">{{ results|selectattr('success','equalto',False)|list|length }}</div><div class="r-stat-lbl">Failed</div></div>
+</div>
+
+{% for r in results %}
+<div class="result-row">
+  <div class="rr-icon {% if r.success %}rr-ok{% else %}rr-fail{% endif %}">
+    {% if r.success %}&#10003;{% else %}&#10007;{% endif %}
+  </div>
+  <div class="rr-info">
+    <div class="rr-title">{{ r.job.title }} <span style="font-size:.72rem;color:var(--muted);font-weight:400;">· {{ r.job.company }} · {{ r.job.match }}% match</span></div>
+    <div class="rr-msg">{{ r.message }}</div>
+  </div>
+  {% if r.job.url and r.job.url != '#' %}
+  <a href="{{ r.job.url }}" target="_blank" class="btn-ghost" style="padding:.35rem .85rem;font-size:.78rem;white-space:nowrap;">View &#8599;</a>
+  {% endif %}
+  <span class="rr-badge {% if r.success %}ok{% else %}fail{% endif %}">
+    {% if r.success %}Applied{% else %}Failed{% endif %}
+  </span>
+</div>
+{% endfor %}
+
+<div style="display:flex;gap:.85rem;flex-wrap:wrap;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+  <a href="{{ url_for('jobs.applications') }}" class="btn-primary">&#128140; View All Applications</a>
+  <a href="{{ url_for('jobs.browse_jobs') }}"  class="btn-ghost">&#128269; Browse More Jobs</a>
+</div>
+
+{% else %}
+<!-- ──────────── MAIN VIEW ──────────── -->
+<div class="aa-layout">
+
+  <!-- Left: controls + matched jobs -->
+  <div>
+
+    <!-- Control panel -->
+    <div class="control-card">
+      <div class="ctrl-title">&#127919; Set Your Match Threshold</div>
+      <form method="POST" action="{{ url_for('apply.auto_apply_page') }}" id="aaForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div class="match-row">
+          <input type="range" name="min_match" id="matchRange" min="40" max="95" value="{{ min_match }}"
+                 oninput="updateThreshold(this.value)"/>
+          <span class="match-val" id="matchVal">{{ min_match }}%</span>
+        </div>
+        <div class="ctrl-meta" id="ctrlMeta">
+          <strong>{{ eligible|length }}</strong> eligible job(s) above {{ min_match }}% match
+          · up to 15 applied per run
+        </div>
+        <button type="submit" class="btn-go" id="goBtn" {% if not resume %}disabled{% endif %}>
+          <span id="goIcon">&#9889;</span>
+          <span id="goText">Apply to {{ [eligible|length, 15]|min }} Matched Job(s)</span>
+        </button>
+        {% if not resume %}
+        <p style="font-size:.78rem;color:#ef4444;margin-top:.7rem;text-align:center;">Upload a resume first to enable auto-apply.</p>
+        {% endif %}
+      </form>
+    </div>
+
+    <!-- Matched jobs preview -->
+    <div class="jobs-list-title">
+      &#128203; Matched Jobs Preview
+      <span style="font-size:.78rem;font-weight:400;color:var(--muted);">({{ all_jobs|length }} total)</span>
+    </div>
+
+    {% for job in all_jobs[:20] %}
+    <div class="job-row {% if job.match < min_match or job.already_applied %}ineligible{% endif %}">
+      <div class="jr-logo">{{ job.logo or '💼' }}</div>
+      <div class="jr-info">
+        <div class="jr-title">{{ job.title }}</div>
+        <div class="jr-company">{{ job.company }} · {{ job.location }}</div>
+      </div>
+      <div class="jr-match">
+        <div class="jr-pct">{{ job.match }}%</div>
+        <div class="jr-lbl">match</div>
+      </div>
+      {% if job.already_applied %}
+      <span class="jr-applied">&#10003; Applied</span>
+      {% elif job.match < min_match %}
+      <span style="font-size:.72rem;color:var(--muted);">Below threshold</span>
+      {% endif %}
+      {% if job.url and job.url != '#' %}
+      <a href="{{ job.url }}" target="_blank" class="btn-ghost" style="padding:.3rem .7rem;font-size:.75rem;flex-shrink:0;">View</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {% if all_jobs|length > 20 %}
+    <p style="font-size:.8rem;color:var(--muted);text-align:center;margin-top:.8rem;">+ {{ all_jobs|length - 20 }} more jobs available. <a href="{{ url_for('jobs.browse_jobs') }}" style="color:var(--purple)">Browse all →</a></p>
+    {% endif %}
+
+  </div>
+
+  <!-- Right: sidebar -->
+  <div>
+
+    {% if resume %}
+    <div class="resume-pill">
+      <div class="rp-icon">&#128196;</div>
+      <div style="min-width:0;">
+        <div class="rp-name">{{ resume.filename }}</div>
+        <div class="rp-date">Used for matching</div>
+      </div>
+    </div>
+    {% else %}
+    <div class="side-card" style="border:1.5px solid #fecaca;background:#fef2f2;">
+      <p style="font-size:.85rem;color:#ef4444;line-height:1.5;">&#9888; No resume found. <a href="{{ url_for('resume.upload') }}" style="color:var(--purple);font-weight:600;">Upload one first</a> to enable matching.</p>
+    </div>
+    {% endif %}
+
+    <div class="side-card">
+      <div class="side-title">&#128161; How Auto-Apply Works</div>
+      <div class="how-step"><div class="step-num">1</div>We fetch jobs that match your detected resume skills.</div>
+      <div class="how-step"><div class="step-num">2</div>Jobs below your match threshold are skipped automatically.</div>
+      <div class="how-step"><div class="step-num">3</div>Each application is logged in your Applications tab.</div>
+      <div class="how-step"><div class="step-num">4</div>For external jobs, a link is saved so you can complete any additional steps.</div>
+      <div class="how-step"><div class="step-num">5</div>Up to 15 applications are processed per run.</div>
+    </div>
+
+    <div class="side-card" style="background:var(--grad1);border:none;">
+      <div class="side-title">&#128202; Your Skill Summary</div>
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;">Jobs are scored against the skills detected from your latest resume.</div>
+      <a href="{{ url_for('resume.analysis') }}" class="btn-primary" style="display:block;text-align:center;font-size:.84rem;">View Full Analysis &#8594;</a>
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+<script>
+  const allJobs  = {{ all_jobs | tojson }};
+  const minRange = document.getElementById('matchRange');
+  const matchVal = document.getElementById('matchVal');
+  const ctrlMeta = document.getElementById('ctrlMeta');
+  const goText   = document.getElementById('goText');
+
+  function updateThreshold(val) {
+    val = parseInt(val);
+    matchVal.textContent = val + '%';
+    const eligible = allJobs.filter(j => j.match >= val && !j.already_applied);
+    const cap      = Math.min(eligible.length, 15);
+    if (ctrlMeta) ctrlMeta.innerHTML =
+      `<strong>${eligible.length}</strong> eligible job(s) above ${val}% match · up to 15 applied per run`;
+    if (goText) goText.textContent = `Apply to ${cap} Matched Job(s)`;
+    // Dim ineligible rows live
+    document.querySelectorAll('.job-row').forEach((row, i) => {
+      const job = allJobs[i];
+      if (!job) return;
+      row.classList.toggle('ineligible', job.match < val || job.already_applied);
+    });
+  }
+
+  // Animate button on submit
+  if (document.getElementById('aaForm')) {
+    document.getElementById('aaForm').addEventListener('submit', function() {
+      const btn = document.getElementById('goBtn');
+      btn.disabled = true;
+      document.getElementById('goIcon').outerHTML = '<span class="spinner" id="goIcon" style="width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span>';
+      document.getElementById('goText').textContent = 'Applying…';
+    });
+  }
+</script>
+{% endblock %}
