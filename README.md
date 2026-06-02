@@ -73,14 +73,28 @@ Role-specific interview questions to help you practice before the simulation.
 
 ## 📸 Screenshots
 
-<!-- Add your screenshots here -->
 | Feature | Preview |
 |---------|---------|
-| Dashboard | ![Dashboard](screenshots/dashboard.png) |
-| ATS Analyzer | ![ATS](screenshots/ats.png) |
-| Interview Simulator | ![Interview](screenshots/interview.png) |
-
----
+| Front Page | ![Front Page](screenshots/Front%20Page.png) |
+| Login | ![Login](screenshots/Login.png) |
+| Dashboard | ![Dashboard](screenshots/Dashboard.png) |
+| Upload Resume | ![Upload](screenshots/Upload_Resume.png) |
+| My Resumes | ![Resumes](screenshots/My_Resumes.png) |
+| Resume Builder | ![Builder](screenshots/Resume_builder.png) |
+| Resume Templates | ![Templates](screenshots/Resume_Builder_Templates.png) |
+| Browse Jobs | ![Jobs](screenshots/Browse_Jobs.png) |
+| Auto Apply | ![Auto Apply](screenshots/auto_apply.png) |
+| My Applications | ![Applications](screenshots/My_Applications.png) |
+| Interview Prep | ![Prep](screenshots/Interview_Prep.png) |
+| Prep Questions | ![Questions](screenshots/Interview_Prep_Questions.png) |
+| Interview Setup | ![Setup](screenshots/Interview_Setup.png) |
+| Text Interview | ![Text](screenshots/Text_Interview.png) |
+| Voice Interview | ![Voice](screenshots/Voice_Inteview.png) |
+| Video Interview | ![Video](screenshots/Video_Interview.png) |
+| 1-on-1 AI Interview | ![AI](screenshots/1_on_1%20Ai%20Interview.png) |
+| Interview Report | ![Report](screenshots/Interview_Report_2.png) |
+| Video Report | ![Video Report](screenshots/Video_Interview_Report.png) |
+| Settings | ![Settings](screenshots/Settings.png) |
 
 ## 🎥 Demo Video
 
