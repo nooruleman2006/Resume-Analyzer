@@ -70,7 +70,6 @@ Role-specific interview questions to help you practice before the simulation.
 - **REST API Integration** — Gemini, Groq, and RapidAPI via HTTP requests
 
 ---
-
 ## 📸 Screenshots
 
 | Feature | Preview |
@@ -95,6 +94,7 @@ Role-specific interview questions to help you practice before the simulation.
 | Interview Report | ![Report](screenshots/Interview_Report_2.png) |
 | Video Report | ![Video Report](screenshots/Video_Interview_Report.png) |
 | Settings | ![Settings](screenshots/Settings.png) |
+
 
 ## 🎥 Demo Video
 
