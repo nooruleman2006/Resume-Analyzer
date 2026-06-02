@@ -73,14 +73,7 @@ Role-specific interview questions to help you practice before the simulation.
 
 ## 📸 Screenshots
 
-<!-- Add your screenshots here -->
-| Feature | Preview |
-|---------|---------|
-| Dashboard | ![Dashboard](screenshots/dashboard.png) |
-| ATS Analyzer | ![ATS](screenshots/ats.png) |
-| Interview Simulator | ![Interview](screenshots/interview.png) |
 
----
 
 ## 🎥 Demo Video
 
