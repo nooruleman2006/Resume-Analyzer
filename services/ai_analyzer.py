@@ -42,8 +42,8 @@ class RateLimitError(Exception):
 # ── Gemini: Resume Analysis ────────────────────────────────────
 
 _GEMINI_MODELS = [
-    "gemini-2.0-flash-lite",
-    "gemini-2.0-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
 ]
 
 

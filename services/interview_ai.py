@@ -21,10 +21,9 @@ _GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # ── Gemini config (fallback) ───────────────────────────────────────────────
 _GEMINI_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
     "gemini-2.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-2.0-flash",
 ]
 
 

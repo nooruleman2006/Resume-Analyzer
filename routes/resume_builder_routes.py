@@ -34,6 +34,46 @@ TEMPLATES_LIST = [
 _TEMPLATES_BY_ID = {t['id']: t for t in TEMPLATES_LIST}
 
 
+# ── Template -> render-style config ─────────────────────────
+# layout: 'plain'    -> ATS-safe, single column, no color/boxes
+#         'centered' -> centered header + accent line, two-column body
+#         'banner'   -> full-width colored header band, single column body
+#         'sidebar'  -> colored left column + main content column
+# accent: matches each template's preview_color above
+# font:   'Helvetica' or 'Times' (fpdf2 core fonts)
+# 'variant' (only meaningful for layout='plain') carries small
+# typographic-only knobs so the 5 ATS-safe/no-color templates stay
+# distinguishable from one another without breaking ATS-safety:
+#   align:   'left' or 'center' name/header alignment
+#   divider: 'none' | 'single' | 'double' rule style under headings
+#   spacing: extra character-spacing (tracking) on section headings
+#   compact: tighter line-height / smaller body font when True
+TEMPLATE_STYLES = {
+    'professional':     {'layout': 'centered', 'accent': '#7c3aed', 'font': 'Helvetica'},
+    'executive':        {'layout': 'banner',   'accent': '#0f4c3a', 'font': 'Times'},
+    'modern_minimal':   {'layout': 'centered', 'accent': '#2563eb', 'font': 'Helvetica'},
+    'simple_classic':   {'layout': 'plain',    'accent': '#374151', 'font': 'Times',
+                          'variant': {'align': 'center', 'divider': 'double', 'spacing': 0, 'compact': False}},
+    'elegant':          {'layout': 'centered', 'accent': '#9f7aea', 'font': 'Times'},
+    'tech_developer':   {'layout': 'sidebar',  'accent': '#0ea5e9', 'font': 'Helvetica'},
+    'creative_bold':    {'layout': 'sidebar',  'accent': '#e11d48', 'font': 'Helvetica'},
+    'academic':         {'layout': 'plain',    'accent': '#1d4ed8', 'font': 'Times',
+                          'variant': {'align': 'left', 'divider': 'single', 'spacing': 0, 'compact': False}},
+    'ats_friendly':     {'layout': 'plain',    'accent': '#15803d', 'font': 'Helvetica',
+                          'variant': {'align': 'left', 'divider': 'none', 'spacing': 0, 'compact': False}},
+    'two_column_pro':   {'layout': 'sidebar',  'accent': '#0f766e', 'font': 'Helvetica'},
+    'fresh_graduate':   {'layout': 'centered', 'accent': '#d97706', 'font': 'Helvetica'},
+    'corporate_blue':   {'layout': 'banner',   'accent': '#1e40af', 'font': 'Times'},
+    'dark_mode':        {'layout': 'banner',   'accent': '#1f2937', 'font': 'Helvetica'},
+    'compact_one_page': {'layout': 'plain',    'accent': '#6d28d9', 'font': 'Helvetica',
+                          'variant': {'align': 'left', 'divider': 'single', 'spacing': 0, 'compact': True}},
+    'infographic':      {'layout': 'sidebar',  'accent': '#db2777', 'font': 'Helvetica'},
+    'minimalist_pro':   {'layout': 'plain',    'accent': '#475569', 'font': 'Helvetica',
+                          'variant': {'align': 'center', 'divider': 'none', 'spacing': 1, 'compact': False}},
+    'slate_gold':       {'layout': 'banner',   'accent': '#b45309', 'font': 'Times'},
+}
+
+
 def _get_template(template_id):
     """Return template dict, falling back to 'professional'."""
     return _TEMPLATES_BY_ID.get(template_id) or _TEMPLATES_BY_ID['professional']
@@ -112,7 +152,7 @@ def builder_preview(draft_id):
     projects       = data.get('projects', [])
 
     return render_template(
-        f'resume_builder/templates/{tpl["file"]}',
+        tpl["file"],
         personal=personal, summary=summary, experience=experience,
         education=education, skills=skills, certifications=certifications,
         languages=languages, projects=projects
@@ -226,20 +266,42 @@ def builder_export_pdf(draft_id):
     except Exception:
         data = {}
 
-    template = draft.get('template') or data.get('template') or 'professional'
-    # sanitize: only allow known template ids
-    if template not in _TEMPLATES_BY_ID:
-        template = 'professional'
+    template_id = request.args.get('template_id') or draft.get('template') or 'professional'
+    tpl = _get_template(template_id)
 
-    pdf_bytes = _generate_pdf(data, template)
-    name      = data.get('personal', {}).get('name', 'Resume').replace(' ', '_')
-    filename  = f"{name}_Resume.pdf"
+    # Render the SAME html template the preview uses
+    html = render_template(
+        tpl['file'],
+        personal=data.get('personal', {}),
+        summary=data.get('summary', ''),
+        experience=data.get('experience', []),
+        education=data.get('education', []),
+        skills=data.get('skills', []),
+        certifications=data.get('certifications', []),
+        languages=data.get('languages', []),
+        projects=data.get('projects', []),
+    )
+
+    # Print it to PDF with headless Chromium
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page()
+        page.set_content(html, wait_until='networkidle')
+        pdf_bytes = page.pdf(
+            format='A4',
+            print_background=True,
+            margin={'top': '0', 'right': '0', 'bottom': '0', 'left': '0'},
+        )
+        browser.close()
+
+    name = data.get('personal', {}).get('name', 'Resume').replace(' ', '_')
+    filename = f"{name}_Resume.pdf"
 
     response = make_response(pdf_bytes)
     response.headers['Content-Type'] = 'application/pdf'
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
-
 
 # ── Export DOCX ───────────────────────────────────────────────
 @builder_bp.route('/resume-builder/<int:draft_id>/export/docx')
@@ -255,7 +317,12 @@ def builder_export_docx(draft_id):
     except Exception:
         data = {}
 
-    docx_bytes = _generate_docx(data)
+    template = draft.get('template') or data.get('template') or 'professional'
+    # sanitize: only allow known template ids
+    if template not in _TEMPLATES_BY_ID:
+        template = 'professional'
+
+    docx_bytes = _generate_docx(data, template)
     name       = data.get('personal', {}).get('name', 'Resume').replace(' ', '_')
     filename   = f"{name}_Resume.docx"
 
@@ -324,741 +391,631 @@ def _data_to_text(data):
     return '\n'.join(lines)
 
 
+# ═══════════════════════════════════════════════════════════════
+# PDF GENERATION — 4 shared layout paths driven by TEMPLATE_STYLES
+# ═══════════════════════════════════════════════════════════════
+
 def _generate_pdf(data, template='professional'):
-    """Generate a styled PDF using fpdf2 with per-template designs."""
+    """Generate a styled PDF using fpdf2. Layout/color/font come from
+    TEMPLATE_STYLES so every template id in TEMPLATES_LIST renders
+    with its own distinct look, not just the 3 that used to have a
+    bespoke branch."""
     from fpdf import FPDF
     import io
 
+    style = TEMPLATE_STYLES.get(template) or TEMPLATE_STYLES['professional']
+    LAYOUT = style['layout']
+    ACCENT = style['accent']
+    FONT   = style['font']
+
     def h2r(hex_color):
         h = hex_color.lstrip('#')
-        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
-    class ResumePDF(FPDF):
-        pass
-
-    pdf = ResumePDF()
+    pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
     PW, M = 210, 15          # page width, margin
     CW = PW - 2 * M          # content width = 180
-    LEFT_W, GAP, RIGHT_W = 60, 8, 112
+    LEFT_W, GAP, RIGHT_W = 62, 8, 110
     LEFT_X, RIGHT_X = M, M + LEFT_W + GAP
 
     p = data.get('personal', {})
-    name = p.get('name', '')
+    name = p.get('name', '') or 'Your Name'
     contacts = [c for c in [p.get('email'), p.get('phone'), p.get('location'),
                             p.get('linkedin'), p.get('portfolio')] if c]
 
-    def sec_title(text, color, y, w, size=10, line_color=None):
-        pdf.set_xy(M, y)
-        pdf.set_font('Helvetica', 'B', size)
+    # ── shared drawing helpers (parametrized by FONT / a supplied color) ──
+    def sec_title(text, color, y, w, size=10, line=True, x=None):
+        x = M if x is None else x
+        pdf.set_xy(x, y)
+        pdf.set_font(FONT, 'B', size)
         pdf.set_text_color(*h2r(color))
         pdf.cell(w, 6, text, ln=1)
-        pdf.set_draw_color(*h2r(line_color or color))
-        pdf.set_line_width(0.4)
-        pdf.line(M, y + 6, M + w, y + 6)
+        if line:
+            pdf.set_draw_color(*h2r(color))
+            pdf.set_line_width(0.35)
+            pdf.line(x, y + 6, x + w, y + 6)
         return y + 9
-
-    def entry_block(title, subtitle, desc, y, w, title_bold=True, title_size=9.5,
-                    title_color='#1e1b4b', sub_color='#6b7280', body_color='#374151'):
-        pdf.set_xy(M, y)
-        pdf.set_font('Helvetica', 'B' if title_bold else '', title_size)
+    
+    def entry_block(title, subtitle, desc, y, w, x=None, title_size=9.5,
+                    title_color='#1f2937', sub_color='#6b7280', body_color='#374151'):
+        x = M if x is None else x
+        pdf.set_xy(x, y)
+        pdf.set_font(FONT, 'B', title_size)
         pdf.set_text_color(*h2r(title_color))
         pdf.cell(w, 5, title, ln=1)
         if subtitle:
-            pdf.set_font('Helvetica', 'I', 8)
+            pdf.set_xy(x, pdf.get_y())
+            pdf.set_font(FONT, 'I', 8)
             pdf.set_text_color(*h2r(sub_color))
             pdf.cell(w, 4, subtitle, ln=1)
         if desc:
-            pdf.set_font('Helvetica', '', 8.5)
+            pdf.set_font(FONT, '', 8.5)
             pdf.set_text_color(*h2r(body_color))
             for line in desc.split('\n'):
-                line = line.strip().lstrip('* ').lstrip('-').strip()
+                line = line.strip().lstrip('*').lstrip('-').strip()
                 if line:
-                    pdf.multi_cell(w, 4, f"*  {line}")
+                    pdf.set_x(x)
+                    pdf.multi_cell(w, 4, f"- {line}")
         return pdf.get_y() + 2
 
-    def chip(text, bg, fg, y, x=None):
-        x = x or pdf.get_x()
+    def skill_chip_row(skills, w, y, x, bg, fg, border=None):
         pdf.set_xy(x, y)
-        pdf.set_fill_color(*h2r(bg))
-        pdf.set_text_color(*h2r(fg))
-        pdf.set_font('Helvetica', 'B', 7)
-        tw = pdf.get_string_width(text) + 4
-        pdf.cell(tw, 5, f'  {text}', ln=0, fill=True)
-        pdf.set_xy(x + tw + 2, y)
-        return x + tw + 2, y
+        pdf.set_font(FONT, '', 8)
+        cx = x
+        for s in skills:
+            tw = pdf.get_string_width(s) + 8
+            if cx + tw > x + w:
+                cx = x
+                y = pdf.get_y() + 6
+            pdf.set_xy(cx, y)
+            pdf.set_fill_color(*h2r(bg))
+            pdf.set_text_color(*h2r(fg))
+            if border:
+                pdf.set_draw_color(*h2r(border))
+                pdf.cell(tw, 5.5, f'  {s}  ', ln=0, fill=True, border=1)
+            else:
+                pdf.cell(tw, 5.5, f'  {s}  ', ln=0, fill=True)
+            cx += tw + 2
+        return pdf.get_y() + 8
 
-    # ═══════════════════════════════════════════════════════════
-    # COLORFUL PRO
-    # ═══════════════════════════════════════════════════════════
-    if template == 'colorful_pro':
-        pdf.set_fill_color(*h2r('#1a1a2e'))
-        pdf.rect(M, 10, CW, 22, style='F')
-        pdf.set_xy(M + 4, 14)
-        pdf.set_font('Helvetica', 'B', 16)
-        pdf.set_text_color(255, 255, 255)
-        pdf.cell(CW - 8, 7, name, ln=1)
-        pdf.set_font('Helvetica', '', 7)
-        pdf.set_text_color(*h2r('#c7d2fe'))
-        pdf.set_xy(M + 4, 22)
-        pdf.cell(CW - 8, 4, '  |  '.join(contacts[:4]), ln=1)
-        # ATS badge
-        pdf.set_fill_color(*h2r('#14b8a6'))
-        pdf.set_text_color(255, 255, 255)
-        pdf.set_font('Helvetica', 'B', 7)
-        pdf.set_xy(PW - M - 30, 13)
-        pdf.cell(26, 5, ' ATS 92%', ln=1, fill=True)
+    # ══════════════════════════════════════════════════
+    # LAYOUT: PLAIN — ATS-safe, single column, no color/boxes
+    # ══════════════════════════════════════════════════
+    def render_plain():
+        variant = style.get('variant') or {}
+        v_align = variant.get('align', 'left')
+        v_divider = variant.get('divider', 'single')
+        v_spacing = variant.get('spacing', 0)
+        v_compact = variant.get('compact', False)
+        align = 'C' if v_align == 'center' else 'L'
+        body_size = 8.5 if v_compact else 9.5
+        line_gap = 4 if v_compact else 4.5
+        head_gap = 2 if v_compact else 3
 
-        # Sidebar background
-        pdf.set_fill_color(*h2r('#0f0f23'))
-        pdf.rect(M, 36, LEFT_W, 250, style='F')
-        ly, ry = 40, 40
-
-        # ── Sidebar ──
-        if data.get('skills'):
-            pdf.set_xy(LEFT_X + 3, ly)
-            pdf.set_font('Helvetica', 'B', 7)
-            pdf.set_text_color(*h2r('#14b8a6'))
-            pdf.cell(LEFT_W - 6, 5, 'SKILLS', ln=1)
-            ly += 7
-            sk_colors = [('#818cf8', '#1e1b4b'), ('#14b8a6', '#0f0f23'),
-                         ('#f59e0b', '#1e1b4b'), ('#ec4899', '#1e1b4b')]
-            for i, s in enumerate(data['skills']):
-                fg, bg = sk_colors[i % 4]
-                pdf.set_xy(LEFT_X + 3, ly)
-                pdf.set_fill_color(*h2r(bg))
-                pdf.set_text_color(*h2r(fg))
-                pdf.set_font('Helvetica', 'B', 7)
-                tw = pdf.get_string_width(s) + 5
-                pdf.cell(tw, 4, f'  {s}  ', ln=1, fill=True)
-                ly += 5
-            ly += 2
-
-        if data.get('education'):
-            pdf.set_xy(LEFT_X + 3, ly)
-            pdf.set_font('Helvetica', 'B', 7)
-            pdf.set_text_color(*h2r('#14b8a6'))
-            pdf.cell(LEFT_W - 6, 5, 'EDUCATION', ln=1)
-            ly += 7
-            for e in data['education']:
-                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree','')
-                pdf.set_xy(LEFT_X + 3, ly)
-                pdf.set_font('Helvetica', 'B', 8)
-                pdf.set_text_color(*h2r('#e5e7eb'))
-                pdf.cell(LEFT_W - 6, 4, e.get('institution',''), ln=1)
-                ly += 4
-                pdf.set_xy(LEFT_X + 3, ly)
-                pdf.set_font('Helvetica', '', 7)
-                pdf.set_text_color(*h2r('#9ca3af'))
-                yr = f' {e["year"]}' if e.get('year') else ''
-                pdf.cell(LEFT_W - 6, 4, f"{deg}{yr}", ln=1)
-                ly += 6
-            ly += 2
-
-        if data.get('languages'):
-            pdf.set_xy(LEFT_X + 3, ly)
-            pdf.set_font('Helvetica', 'B', 7)
-            pdf.set_text_color(*h2r('#14b8a6'))
-            pdf.cell(LEFT_W - 6, 5, 'LANGUAGES', ln=1)
-            ly += 7
-            levels = {'Native':100,'Fluent':90,'Advanced':75,'Intermediate':55,'Basic':35}
-            for l in data['languages']:
-                pdf.set_xy(LEFT_X + 3, ly)
-                pdf.set_font('Helvetica', '', 7.5)
-                pdf.set_text_color(*h2r('#d1d5db'))
-                pdf.cell(LEFT_W - 6, 4, f"{l.get('language','')}  {l.get('level','')}", ln=1)
-                ly += 4
-                bar_w = LEFT_W - 10
-                fill_w = bar_w * levels.get(l.get('level',''), 60) / 100
-                pdf.set_fill_color(*h2r('#1a1a2e'))
-                pdf.rect(LEFT_X + 3, ly, bar_w, 2, style='F')
-                pdf.set_fill_color(*h2r('#6366f1'))
-                pdf.rect(LEFT_X + 3, ly, fill_w, 2, style='F')
-                ly += 4
-            ly += 2
-
-        # ── Main ──
-        if data.get('summary'):
-            ry = sec_title('SUMMARY', '#6366f1', ry, RIGHT_W, size=9, line_color='#6366f1')
-            pdf.set_xy(RIGHT_X, ry)
-            pdf.set_font('Helvetica', '', 8.5)
-            pdf.set_text_color(*h2r('#374151'))
-            pdf.multi_cell(RIGHT_W, 4, data['summary'])
-            ry = pdf.get_y() + 4
-
-        if data.get('experience'):
-            ry = sec_title('EXPERIENCE', '#6366f1', ry, RIGHT_W, size=9, line_color='#6366f1')
-            for e in data['experience']:
-                pdf.set_xy(RIGHT_X, ry)
-                pdf.set_font('Helvetica', 'B', 9.5)
-                pdf.set_text_color(*h2r('#1f2937'))
-                pdf.cell(RIGHT_W, 5, e.get('role',''), ln=1)
-                pdf.set_xy(RIGHT_X, ry + 5)
-                pdf.set_font('Helvetica', 'B', 8)
-                pdf.set_text_color(*h2r('#6366f1'))
-                pdf.cell(RIGHT_W, 4, e.get('company',''), ln=1)
-                pdf.set_xy(RIGHT_X, ry + 9)
-                pdf.set_fill_color(*h2r('#ede9fe'))
-                pdf.set_text_color(*h2r('#6366f1'))
-                pdf.set_font('Helvetica', 'B', 7)
-                pdf.cell(0, 4, f"  {e.get('start','')}  -  {e.get('end','Present')}  ", ln=1, fill=True)
-                ry += 14
-                if e.get('description'):
-                    pdf.set_xy(RIGHT_X + 3, ry)
-                    pdf.set_font('Helvetica', '', 8)
-                    pdf.set_text_color(*h2r('#374151'))
-                    for line in e['description'].split('\n'):
-                        line = line.strip().lstrip('* ').lstrip('-').strip()
-                        if line:
-                            pdf.multi_cell(RIGHT_W - 3, 3.5, f"*  {line}")
-                    ry = pdf.get_y() + 2
-                else:
-                    ry += 2
-            ry += 2
-
-        if data.get('projects'):
-            ry = sec_title('PROJECTS', '#6366f1', ry, RIGHT_W, size=9, line_color='#6366f1')
-            for pr in data['projects']:
-                pdf.set_xy(RIGHT_X, ry)
-                pdf.set_font('Helvetica', 'B', 9)
-                pdf.set_text_color(*h2r('#1f2937'))
-                pdf.cell(RIGHT_W, 5, pr.get('name',''), ln=1)
-                if pr.get('technologies'):
-                    pdf.set_xy(RIGHT_X, ry + 5)
-                    pdf.set_font('Helvetica', 'B', 7.5)
-                    pdf.set_text_color(*h2r('#14b8a6'))
-                    pdf.cell(RIGHT_W, 4, pr['technologies'], ln=1)
-                    ry += 4
-                if pr.get('description'):
-                    pdf.set_xy(RIGHT_X + 3, ry + 5)
-                    pdf.set_font('Helvetica', '', 8)
-                    pdf.set_text_color(*h2r('#374151'))
-                    pdf.multi_cell(RIGHT_W - 3, 3.5, pr['description'])
-                    ry = pdf.get_y()
-                ry += 8
-
-    # ═══════════════════════════════════════════════════════════
-    # EXECUTIVE
-    # ═══════════════════════════════════════════════════════════
-    elif template == 'executive':
-        pdf.set_fill_color(*h2r('#0f4c3a'))
-        pdf.rect(M, 10, CW, 28, style='F')
-        pdf.set_xy(M, 16)
-        pdf.set_font('Times', 'B', 20)
-        pdf.set_text_color(255, 255, 255)
-        pdf.cell(CW, 8, name, ln=1, align='C')
-        pdf.set_font('Times', '', 9)
-        pdf.set_text_color(*h2r('#d4a017'))
-        pdf.cell(CW, 5, '   |   '.join(contacts), ln=1, align='C')
-
-        y = 44
-        pdf.set_draw_color(*h2r('#d4a017'))
-        pdf.set_line_width(0.6)
-        pdf.line(M, y, PW - M, y)
-        y += 6
-
-        def exec_sec(text, y_pos):
-            pdf.set_xy(M, y_pos)
-            pdf.set_font('Times', 'B', 10)
-            pdf.set_text_color(*h2r('#0f4c3a'))
-            pdf.set_char_spacing(0.8)
-            pdf.cell(CW, 6, text.upper(), ln=1)
-            pdf.set_char_spacing(0)
-            pdf.set_draw_color(*h2r('#e5e7eb'))
-            pdf.set_line_width(0.2)
-            pdf.line(M, y_pos + 6, PW - M, y_pos + 6)
-            return y_pos + 9
-
-        if data.get('summary'):
-            y = exec_sec('Professional Summary', y)
-            pdf.set_xy(M, y)
-            pdf.set_font('Times', '', 9.5)
-            pdf.set_text_color(*h2r('#374151'))
-            pdf.multi_cell(CW, 5, data['summary'])
-            y = pdf.get_y() + 4
-            pdf.set_draw_color(*h2r('#d4a017'))
-            pdf.set_line_width(0.6)
-            pdf.line(M, y, PW - M, y)
-            y += 6
-
-        if data.get('experience'):
-            y = exec_sec('Professional Experience', y)
-            for e in data['experience']:
-                pdf.set_xy(M + 4, y)
-                pdf.set_draw_color(*h2r('#d4a017'))
-                pdf.set_line_width(0.4)
-                pdf.ellipse(M - 2, y + 1, 3, 3, style='F')
-                pdf.set_font('Times', 'B', 10)
-                pdf.set_text_color(*h2r('#1f2937'))
-                pdf.cell(CW - 8, 5, e.get('role',''), ln=1)
-                pdf.set_xy(M + 4, y + 5)
-                pdf.set_font('Times', 'I', 9)
-                pdf.set_text_color(*h2r('#0f4c3a'))
-                pdf.cell(CW - 8, 4, e.get('company',''), ln=1)
-                pdf.set_xy(M + 4, y + 9)
-                pdf.set_font('Times', '', 8.5)
-                pdf.set_text_color(*h2r('#6b7280'))
-                pdf.cell(CW - 8, 4, f"{e.get('start','')}  -  {e.get('end','Present')}", ln=1)
-                y += 14
-                if e.get('description'):
-                    pdf.set_xy(M + 8, y)
-                    pdf.set_font('Times', '', 9)
-                    pdf.set_text_color(*h2r('#374151'))
-                    for line in e['description'].split('\n'):
-                        line = line.strip().lstrip('* ').lstrip('-').strip()
-                        if line:
-                            pdf.multi_cell(CW - 12, 4, f" |  {line}")
-                    y = pdf.get_y() + 2
-                else:
-                    y += 2
-            y += 4
-            pdf.set_draw_color(*h2r('#d4a017'))
-            pdf.set_line_width(0.6)
-            pdf.line(M, y, PW - M, y)
-            y += 6
-
-        if data.get('education'):
-            y = exec_sec('Education', y)
-            for e in data['education']:
-                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree','')
-                pdf.set_xy(M, y)
-                pdf.set_font('Times', 'B', 10)
-                pdf.set_text_color(*h2r('#1f2937'))
-                pdf.cell(CW, 5, deg, ln=1)
-                pdf.set_xy(M, y + 5)
-                pdf.set_font('Times', 'I', 9)
-                pdf.set_text_color(*h2r('#0f4c3a'))
-                yr = f' {e["year"]}' if e.get('year') else ''
-                pdf.cell(CW, 4, f"{e.get('institution','')}{yr}", ln=1)
-                y += 12
-            y += 4
-            pdf.set_draw_color(*h2r('#d4a017'))
-            pdf.set_line_width(0.6)
-            pdf.line(M, y, PW - M, y)
-            y += 6
-
-        if data.get('skills'):
-            y = exec_sec('Core Competencies', y)
-            pdf.set_xy(M, y)
-            pdf.set_font('Times', '', 9.5)
-            pdf.set_text_color(*h2r('#374151'))
-            for s in data['skills']:
-                pdf.cell(pdf.get_string_width(s) + 10, 5, f" |  {s}  ", ln=0)
-            pdf.ln()
-            y = pdf.get_y() + 4
-            pdf.set_draw_color(*h2r('#d4a017'))
-            pdf.set_line_width(0.6)
-            pdf.line(M, y, PW - M, y)
-            y += 6
-
-        if data.get('certifications'):
-            y = exec_sec('Certifications', y)
-            for c in data['certifications']:
-                pdf.set_xy(M, y)
-                pdf.set_font('Times', '', 9)
-                pdf.set_text_color(*h2r('#374151'))
-                org = f'  -  {c["org"]}' if c.get('org') else ''
-                yr  = f' ({c["year"]})' if c.get('year') else ''
-                pdf.cell(CW, 4, f"{c.get('name','')}{org}{yr}", ln=1)
-                y += 5
-            y += 4
-            pdf.set_draw_color(*h2r('#d4a017'))
-            pdf.set_line_width(0.6)
-            pdf.line(M, y, PW - M, y)
-            y += 6
-
-        if data.get('languages'):
-            y = exec_sec('Languages', y)
-            pdf.set_xy(M, y)
-            pdf.set_font('Times', '', 9.5)
-            pdf.set_text_color(*h2r('#374151'))
-            langs = [f"{l.get('language','')} ({l.get('level','')})" for l in data['languages']]
-            pdf.cell(CW, 5, '   |   '.join(langs), ln=1)
-
-    # ═══════════════════════════════════════════════════════════
-    # CREATIVE
-    # ═══════════════════════════════════════════════════════════
-    elif template == 'creative':
-        pdf.set_fill_color(*h2r('#8B3A3A'))
-        pdf.rect(M, 10, LEFT_W, 277, style='F')
-        ly, ry = 18, 18
-
-        # Avatar initials
-        initials = ''.join([w[0] for w in name.split() if w])[:2].upper() if name else '?'
-        pdf.set_xy(LEFT_X + 10, ly)
-        pdf.set_font('Helvetica', 'B', 14)
-        pdf.set_text_color(255, 255, 255)
-        pdf.cell(LEFT_W - 20, 8, initials, ln=1, align='C')
-        ly += 12
-
-        if name:
-            pdf.set_xy(LEFT_X + 3, ly)
-            pdf.set_font('Helvetica', 'B', 10)
-            pdf.set_text_color(255, 255, 255)
-            pdf.cell(LEFT_W - 6, 5, name, ln=1, align='C')
-            ly += 6
-
-        first_role = ''
-        if data.get('experience'):
-            first_role = next((e.get('role','') for e in data['experience'] if e.get('role')), '')
-        if first_role:
-            pdf.set_xy(LEFT_X + 3, ly)
-            pdf.set_font('Helvetica', '', 7.5)
-            pdf.set_text_color(200, 200, 210)
-            pdf.cell(LEFT_W - 6, 4, first_role, ln=1, align='C')
-            ly += 6
-
+        y = 16
+        pdf.set_xy(M, y)
+        pdf.set_font(FONT, 'B', 15 if v_compact else 16)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(CW, 7, name, ln=1, align=align)
+        y += 7
         if contacts:
-            pdf.set_xy(LEFT_X + 3, ly)
-            pdf.set_font('Helvetica', 'B', 7)
-            pdf.set_text_color(180, 180, 190)
-            pdf.cell(LEFT_W - 6, 5, 'CONTACT', ln=1)
-            ly += 6
-            pdf.set_font('Helvetica', '', 7)
-            pdf.set_text_color(220, 220, 220)
-            for c in contacts[:4]:
-                pdf.set_xy(LEFT_X + 3, ly)
-                pdf.cell(LEFT_W - 6, 4, c, ln=1)
-                ly += 4.5
-            ly += 2
+            pdf.set_xy(M, y)
+            pdf.set_font(FONT, '', 9)
+            pdf.set_text_color(60, 60, 60)
+            pdf.cell(CW, 5, '  |  '.join(contacts), ln=1, align=align)
+            y += 5 if v_compact else 6
+        if v_divider != 'none':
+            pdf.set_draw_color(120, 120, 120)
+            pdf.set_line_width(0.3)
+            pdf.line(M, y, PW - M, y)
+            if v_divider == 'double':
+                pdf.line(M, y + 1, PW - M, y + 1)
+        y += head_gap + 3
 
-        if data.get('skills'):
-            pdf.set_xy(LEFT_X + 3, ly)
-            pdf.set_font('Helvetica', 'B', 7)
-            pdf.set_text_color(180, 180, 190)
-            pdf.cell(LEFT_W - 6, 5, 'SKILLS', ln=1)
-            ly += 6
-            for i, s in enumerate(data['skills']):
-                pdf.set_xy(LEFT_X + 3, ly)
-                pdf.set_font('Helvetica', '', 7)
-                pdf.set_text_color(255, 255, 255)
-                pdf.cell(LEFT_W - 6, 4, s, ln=1)
-                ly += 4
-                bar_w = LEFT_W - 10
-                fill_w = bar_w * max(95 - i * 7, 40) / 100
-                pdf.set_fill_color(140, 80, 80)
-                pdf.rect(LEFT_X + 3, ly, bar_w, 2, style='F')
-                pdf.set_fill_color(220, 220, 220)
-                pdf.rect(LEFT_X + 3, ly, fill_w, 2, style='F')
-                ly += 4
-            ly += 2
-
-        if data.get('languages'):
-            pdf.set_xy(LEFT_X + 3, ly)
-            pdf.set_font('Helvetica', 'B', 7)
-            pdf.set_text_color(180, 180, 190)
-            pdf.cell(LEFT_W - 6, 5, 'LANGUAGES', ln=1)
-            ly += 6
-            for l in data['languages']:
-                pdf.set_xy(LEFT_X + 3, ly)
-                pdf.set_font('Helvetica', '', 7)
-                pdf.set_text_color(220, 220, 220)
-                pdf.cell(LEFT_W - 6, 4, f"{l.get('language','')}  {l.get('level','')}", ln=1)
-                ly += 4.5
-            ly += 2
-
-        if data.get('certifications'):
-            pdf.set_xy(LEFT_X + 3, ly)
-            pdf.set_font('Helvetica', 'B', 7)
-            pdf.set_text_color(180, 180, 190)
-            pdf.cell(LEFT_W - 6, 5, 'CERTIFICATIONS', ln=1)
-            ly += 6
-            for c in data['certifications']:
-                pdf.set_xy(LEFT_X + 3, ly)
-                pdf.set_font('Helvetica', '', 7)
-                pdf.set_text_color(220, 220, 220)
-                yr = f' ({c["year"]})' if c.get('year') else ''
-                pdf.cell(LEFT_W - 6, 4, f"{c.get('name','')}{yr}", ln=1)
-                ly += 4.5
-            ly += 2
-
-        # ── Main ──
-        if name:
-            pdf.set_xy(RIGHT_X, ry)
-            pdf.set_font('Helvetica', 'B', 16)
-            pdf.set_text_color(*h2r('#8B3A3A'))
-            pdf.cell(RIGHT_W, 7, name, ln=1)
-            ry += 8
-        if first_role:
-            pdf.set_xy(RIGHT_X, ry)
-            pdf.set_font('Helvetica', 'B', 9)
-            pdf.set_text_color(*h2r('#8B3A3A'))
-            pdf.cell(RIGHT_W, 5, first_role, ln=1)
-            ry += 7
+        def heading(text, y):
+            pdf.set_xy(M, y)
+            pdf.set_font(FONT, 'B', 10.5)
+            pdf.set_text_color(0, 0, 0)
+            if v_spacing:
+                pdf.set_char_spacing(v_spacing)
+            pdf.cell(CW, 6, text.upper(), ln=1, align=align)
+            if v_spacing:
+                pdf.set_char_spacing(0)
+            if v_divider != 'none':
+                pdf.set_draw_color(150, 150, 150)
+                pdf.set_line_width(0.2)
+                pdf.line(M, y + 6, PW - M, y + 6)
+                if v_divider == 'double':
+                    pdf.line(M, y + 6.8, PW - M, y + 6.8)
+            return y + 9 - (1 if v_compact else 0)
 
         if data.get('summary'):
-            ry = sec_title('ABOUT ME', '#8B3A3A', ry, RIGHT_W, size=9, line_color='#f9e0e0')
-            pdf.set_xy(RIGHT_X, ry)
-            pdf.set_font('Helvetica', '', 8.5)
-            pdf.set_text_color(*h2r('#374151'))
-            pdf.multi_cell(RIGHT_W, 4, data['summary'])
-            ry = pdf.get_y() + 4
+            y = heading('Summary', y)
+            pdf.set_xy(M, y)
+            pdf.set_font(FONT, '', body_size)
+            pdf.set_text_color(20, 20, 20)
+            pdf.multi_cell(CW, line_gap, data['summary'])
+            y = pdf.get_y() + head_gap
 
         if data.get('experience'):
-            ry = sec_title('EXPERIENCE', '#8B3A3A', ry, RIGHT_W, size=9, line_color='#f9e0e0')
+            y = heading('Experience', y)
             for e in data['experience']:
-                pdf.set_xy(RIGHT_X, ry)
-                pdf.set_font('Helvetica', 'B', 9)
-                pdf.set_text_color(*h2r('#1f2937'))
-                pdf.cell(RIGHT_W, 5, e.get('role',''), ln=1)
-                pdf.set_xy(RIGHT_X, ry + 5)
-                pdf.set_font('Helvetica', 'B', 8)
-                pdf.set_text_color(*h2r('#8B3A3A'))
-                pdf.cell(RIGHT_W, 4, e.get('company',''), ln=1)
-                pdf.set_xy(RIGHT_X, ry + 9)
-                pdf.set_font('Helvetica', '', 7.5)
-                pdf.set_text_color(*h2r('#9ca3af'))
-                pdf.cell(RIGHT_W, 4, f"{e.get('start','')}  -  {e.get('end','Present')}", ln=1)
-                ry += 14
-                if e.get('description'):
-                    pdf.set_xy(RIGHT_X + 3, ry)
-                    pdf.set_font('Helvetica', '', 8)
-                    pdf.set_text_color(*h2r('#374151'))
-                    for line in e['description'].split('\n'):
-                        line = line.strip().lstrip('* ').lstrip('-').strip()
-                        if line:
-                            pdf.multi_cell(RIGHT_W - 3, 3.5, f">  {line}")
-                    ry = pdf.get_y() + 2
-                else:
-                    ry += 2
-            ry += 2
+                title = e.get('role', '')
+                if e.get('company'):
+                    title = f"{title} - {e['company']}" if title else e['company']
+                y = entry_block(title, f"{e.get('start','')} - {e.get('end','Present')}",
+                                e.get('description', ''), y, CW,
+                                title_color='#000000', sub_color='#444444', body_color='#111111')
 
         if data.get('education'):
-            ry = sec_title('EDUCATION', '#8B3A3A', ry, RIGHT_W, size=9, line_color='#f9e0e0')
+            y = heading('Education', y)
             for e in data['education']:
-                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree','')
-                pdf.set_xy(RIGHT_X, ry)
-                pdf.set_font('Helvetica', 'B', 9)
-                pdf.set_text_color(*h2r('#1f2937'))
-                pdf.cell(RIGHT_W, 5, deg, ln=1)
-                pdf.set_xy(RIGHT_X, ry + 5)
-                pdf.set_font('Helvetica', '', 8)
-                pdf.set_text_color(*h2r('#6b7280'))
+                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree', '')
                 yr = f' {e["year"]}' if e.get('year') else ''
-                pdf.cell(RIGHT_W, 4, f"{e.get('institution','')}{yr}", ln=1)
-                ry += 11
-            ry += 2
+                y = entry_block(deg, f"{e.get('institution','')}{yr}", '', y, CW,
+                                title_color='#000000', sub_color='#444444')
+
+        if data.get('skills'):
+            y = heading('Skills', y)
+            pdf.set_xy(M, y)
+            pdf.set_font(FONT, '', body_size)
+            pdf.set_text_color(20, 20, 20)
+            pdf.multi_cell(CW, line_gap, ', '.join(data['skills']))
+            y = pdf.get_y() + head_gap
 
         if data.get('projects'):
-            ry = sec_title('PROJECTS', '#8B3A3A', ry, RIGHT_W, size=9, line_color='#f9e0e0')
+            y = heading('Projects', y)
             for pr in data['projects']:
-                pdf.set_xy(RIGHT_X, ry)
-                pdf.set_font('Helvetica', 'B', 9)
-                pdf.set_text_color(*h2r('#1f2937'))
-                pdf.cell(RIGHT_W, 5, pr.get('name',''), ln=1)
-                if pr.get('technologies'):
-                    pdf.set_xy(RIGHT_X, ry + 5)
-                    pdf.set_font('Helvetica', 'B', 7.5)
-                    pdf.set_text_color(*h2r('#8B3A3A'))
-                    pdf.cell(RIGHT_W, 4, pr['technologies'], ln=1)
-                    ry += 4
-                if pr.get('description'):
-                    pdf.set_xy(RIGHT_X + 3, ry + 5)
-                    pdf.set_font('Helvetica', '', 8)
-                    pdf.set_text_color(*h2r('#374151'))
-                    pdf.multi_cell(RIGHT_W - 3, 3.5, pr['description'])
-                    ry = pdf.get_y()
-                ry += 8
+                sub = f"Technologies: {pr['technologies']}" if pr.get('technologies') else ''
+                y = entry_block(pr.get('name', ''), sub, pr.get('description', ''), y, CW,
+                                title_color='#000000', sub_color='#444444')
 
-    # ═══════════════════════════════════════════════════════════
-    # PROFESSIONAL (default)
-    # ═══════════════════════════════════════════════════════════
-    else:
+        if data.get('certifications'):
+            y = heading('Certifications', y)
+            for c in data['certifications']:
+                org = f' - {c["org"]}' if c.get('org') else ''
+                yr = f' ({c["year"]})' if c.get('year') else ''
+                pdf.set_xy(M, y)
+                pdf.set_font(FONT, '', 9)
+                pdf.set_text_color(20, 20, 20)
+                pdf.cell(CW, 5, f"{c.get('name','')}{org}{yr}", ln=1)
+                y += 5
+            y += head_gap
+
+        if data.get('languages'):
+            y = heading('Languages', y)
+            langs = [f"{l.get('language','')} ({l.get('level','')})" for l in data['languages']]
+            pdf.set_xy(M, y)
+            pdf.set_font(FONT, '', 9)
+            pdf.set_text_color(20, 20, 20)
+            pdf.multi_cell(CW, 5, '   |   '.join(langs))
+
+    # ══════════════════════════════════════════════════
+    # LAYOUT: CENTERED — centered header + accent line, two-column body
+    # ══════════════════════════════════════════════════
+    def render_centered():
         pdf.set_xy(M, 15)
-        pdf.set_font('Helvetica', 'B', 18)
-        pdf.set_text_color(*h2r('#1e1b4b'))
+        pdf.set_font(FONT, 'B', 18)
+        pdf.set_text_color(*h2r(ACCENT))
         pdf.cell(CW, 8, name, ln=1, align='C')
-        pdf.set_font('Helvetica', '', 8)
-        pdf.set_text_color(*h2r('#6b7280'))
-        pdf.cell(CW, 5, '  |  '.join(contacts), ln=1, align='C')
-        pdf.set_draw_color(*h2r('#a78bfa'))
+        if contacts:
+            pdf.set_font(FONT, '', 8.5)
+            pdf.set_text_color(90, 90, 90)
+            pdf.cell(CW, 5, '  |  '.join(contacts), ln=1, align='C')
+        pdf.set_draw_color(*h2r(ACCENT))
         pdf.set_line_width(0.8)
         pdf.line(M, 32, PW - M, 32)
         y = 38
 
         if data.get('summary'):
-            y = sec_title('PROFESSIONAL SUMMARY', '#7c3aed', y, CW, size=10, line_color='#ede9fe')
+            y = sec_title('PROFESSIONAL SUMMARY', ACCENT, y, CW, size=10)
             pdf.set_xy(M, y)
-            pdf.set_font('Helvetica', '', 9)
+            pdf.set_font(FONT, '', 9)
             pdf.set_text_color(*h2r('#374151'))
             pdf.multi_cell(CW, 4.5, data['summary'])
             y = pdf.get_y() + 4
 
         if data.get('experience'):
-            y = sec_title('WORK EXPERIENCE', '#7c3aed', y, CW, size=10, line_color='#ede9fe')
+            y = sec_title('WORK EXPERIENCE', ACCENT, y, CW, size=10)
             for e in data['experience']:
-                y = entry_block(
-                    f"{e.get('role','')}{'  -  ' if e.get('role') and e.get('company') else ''}{e.get('company','')}",
-                    f"{e.get('start','')}  -  {e.get('end','Present')}",
-                    e.get('description',''), y, CW,
-                    title_color='#1e1b4b', sub_color='#6b7280', body_color='#374151'
-                )
+                title = e.get('role', '')
+                if e.get('company'):
+                    title = f"{title} - {e['company']}" if title else e['company']
+                y = entry_block(title, f"{e.get('start','')} - {e.get('end','Present')}",
+                                e.get('description', ''), y, CW)
             y += 2
 
-        # Two-column: Education + Projects | Skills + Certs + Langs
         mid = y
         if data.get('education') or data.get('projects'):
-            y = sec_title('EDUCATION', '#7c3aed', y, CW / 2 - 4, size=10, line_color='#ede9fe')
+            y = sec_title('EDUCATION', ACCENT, y, CW / 2 - 4, size=10)
             for e in data['education']:
-                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree','')
-                pdf.set_xy(M, y)
-                pdf.set_font('Helvetica', 'B', 9)
-                pdf.set_text_color(*h2r('#1e1b4b'))
-                pdf.cell(CW / 2 - 4, 5, deg, ln=1)
-                pdf.set_xy(M, y + 5)
-                pdf.set_font('Helvetica', 'I', 8)
-                pdf.set_text_color(*h2r('#6b7280'))
+                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree', '')
                 yr = f' {e["year"]}' if e.get('year') else ''
-                pdf.cell(CW / 2 - 4, 4, f"{e.get('institution','')}{yr}", ln=1)
-                y += 11
+                y = entry_block(deg, f"{e.get('institution','')}{yr}", '', y, CW / 2 - 4)
             if data.get('projects'):
-                y = sec_title('PROJECTS', '#7c3aed', y, CW / 2 - 4, size=10, line_color='#ede9fe')
+                y = sec_title('PROJECTS', ACCENT, y, CW / 2 - 4, size=10)
                 for pr in data['projects']:
-                    pdf.set_xy(M, y)
-                    pdf.set_font('Helvetica', 'B', 9)
-                    pdf.set_text_color(*h2r('#1e1b4b'))
-                    pdf.cell(CW / 2 - 4, 5, pr.get('name',''), ln=1)
-                    if pr.get('technologies'):
-                        pdf.set_xy(M, y + 5)
-                        pdf.set_font('Helvetica', 'I', 8)
-                        pdf.set_text_color(*h2r('#6b7280'))
-                        pdf.cell(CW / 2 - 4, 4, f"Tech: {pr['technologies']}", ln=1)
-                        y += 5
-                    if pr.get('description'):
-                        pdf.set_xy(M, y + 5)
-                        pdf.set_font('Helvetica', '', 8)
-                        pdf.set_text_color(*h2r('#374151'))
-                        pdf.multi_cell(CW / 2 - 4, 3.5, pr['description'])
-                        y = pdf.get_y()
-                    y += 8
-            y += 4
+                    sub = f"Tech: {pr['technologies']}" if pr.get('technologies') else ''
+                    y = entry_block(pr.get('name', ''), sub, pr.get('description', ''), y, CW / 2 - 4)
+            y += 2
 
         ry = mid
         if data.get('skills'):
-            ry = sec_title('SKILLS', '#7c3aed', ry, CW / 2 - 4, size=10, line_color='#ede9fe')
-            pdf.set_xy(M + CW / 2 + 4, ry)
-            pdf.set_font('Helvetica', '', 8.5)
-            pdf.set_text_color(*h2r('#374151'))
-            for s in data['skills']:
-                pdf.set_fill_color(*h2r('#f5f3ff'))
-                pdf.set_draw_color(*h2r('#ede9fe'))
-                tw = pdf.get_string_width(s) + 10
-                pdf.cell(tw, 5, f'  {s}  ', ln=0, fill=True, border=1)
-                pdf.set_xy(pdf.get_x() + 2, ry)
-            pdf.ln()
-            ry = pdf.get_y() + 4
+            ry = sec_title('SKILLS', ACCENT, ry, CW / 2 - 4, size=10)
+            ry = skill_chip_row(data['skills'], CW / 2 - 4, ry, M + CW / 2 + 4,
+                                bg='#f5f3ff', fg='#374151', border='#e5e7eb') - 4
 
         if data.get('certifications'):
-            ry = sec_title('CERTIFICATIONS', '#7c3aed', ry, CW / 2 - 4, size=10, line_color='#ede9fe')
+            ry = sec_title('CERTIFICATIONS', ACCENT, ry, CW / 2 - 4, size=10)
             for c in data['certifications']:
                 pdf.set_xy(M + CW / 2 + 4, ry)
-                pdf.set_font('Helvetica', '', 8.5)
+                pdf.set_font(FONT, '', 8.5)
                 pdf.set_text_color(*h2r('#374151'))
-                org = f'  -  {c["org"]}' if c.get('org') else ''
-                yr  = f' ({c["year"]})' if c.get('year') else ''
+                org = f' - {c["org"]}' if c.get('org') else ''
+                yr = f' ({c["year"]})' if c.get('year') else ''
                 pdf.cell(CW / 2 - 4, 4, f"{c.get('name','')}{org}{yr}", ln=1)
                 ry += 5
             ry += 2
 
         if data.get('languages'):
-            ry = sec_title('LANGUAGES', '#7c3aed', ry, CW / 2 - 4, size=10, line_color='#ede9fe')
+            ry = sec_title('LANGUAGES', ACCENT, ry, CW / 2 - 4, size=10)
             pdf.set_xy(M + CW / 2 + 4, ry)
-            pdf.set_font('Helvetica', '', 8.5)
+            pdf.set_font(FONT, '', 8.5)
             pdf.set_text_color(*h2r('#374151'))
             langs = [f"{l.get('language','')} ({l.get('level','')})" for l in data['languages']]
-            pdf.cell(CW / 2 - 4, 5, '   |   '.join(langs), ln=1)
+            pdf.multi_cell(CW / 2 - 4, 5, '   |   '.join(langs))
+
+    # ══════════════════════════════════════════════════
+    # LAYOUT: BANNER — full-width colored header band, single column
+    # ══════════════════════════════════════════════════
+    def render_banner():
+        pdf.set_fill_color(*h2r(ACCENT))
+        pdf.rect(0, 0, PW, 30, style='F')
+        pdf.set_xy(M, 9)
+        pdf.set_font(FONT, 'B', 19)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(CW, 8, name, ln=1)
+        if contacts:
+            pdf.set_xy(M, 19)
+            pdf.set_font(FONT, '', 9)
+            pdf.set_text_color(235, 235, 235)
+            pdf.cell(CW, 5, '   |   '.join(contacts), ln=1)
+
+        y = 38
+
+        def heading(text, y):
+            pdf.set_xy(M, y)
+            pdf.set_font(FONT, 'B', 10.5)
+            pdf.set_text_color(*h2r(ACCENT))
+            pdf.cell(CW, 6, text.upper(), ln=1)
+            pdf.set_draw_color(*h2r('#e5e7eb'))
+            pdf.set_line_width(0.3)
+            pdf.line(M, y + 6, PW - M, y + 6)
+            return y + 9
+
+        if data.get('summary'):
+            y = heading('Professional Summary', y)
+            pdf.set_xy(M, y)
+            pdf.set_font(FONT, '', 9.5)
+            pdf.set_text_color(*h2r('#374151'))
+            pdf.multi_cell(CW, 4.5, data['summary'])
+            y = pdf.get_y() + 4
+
+        if data.get('experience'):
+            y = heading('Professional Experience', y)
+            for e in data['experience']:
+                title = e.get('role', '')
+                if e.get('company'):
+                    title = f"{title} - {e['company']}" if title else e['company']
+                y = entry_block(title, f"{e.get('start','')} - {e.get('end','Present')}",
+                                e.get('description', ''), y, CW,
+                                title_color='#1f2937', sub_color=ACCENT)
+
+        if data.get('education'):
+            y = heading('Education', y)
+            for e in data['education']:
+                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree', '')
+                yr = f' {e["year"]}' if e.get('year') else ''
+                y = entry_block(deg, f"{e.get('institution','')}{yr}", '', y, CW,
+                                title_color='#1f2937', sub_color=ACCENT)
+
+        if data.get('skills'):
+            y = heading('Core Skills', y)
+            y = skill_chip_row(data['skills'], CW, y, M, bg='#f3f4f6', fg='#1f2937')
+
+        if data.get('projects'):
+            y = heading('Projects', y)
+            for pr in data['projects']:
+                sub = f"Technologies: {pr['technologies']}" if pr.get('technologies') else ''
+                y = entry_block(pr.get('name', ''), sub, pr.get('description', ''), y, CW,
+                                title_color='#1f2937', sub_color=ACCENT)
+
+        if data.get('certifications'):
+            y = heading('Certifications', y)
+            for c in data['certifications']:
+                org = f' - {c["org"]}' if c.get('org') else ''
+                yr = f' ({c["year"]})' if c.get('year') else ''
+                pdf.set_xy(M, y)
+                pdf.set_font(FONT, '', 9)
+                pdf.set_text_color(*h2r('#374151'))
+                pdf.cell(CW, 5, f"{c.get('name','')}{org}{yr}", ln=1)
+                y += 5
+            y += 3
+
+        if data.get('languages'):
+            y = heading('Languages', y)
+            langs = [f"{l.get('language','')} ({l.get('level','')})" for l in data['languages']]
+            pdf.set_xy(M, y)
+            pdf.set_font(FONT, '', 9.5)
+            pdf.set_text_color(*h2r('#374151'))
+            pdf.multi_cell(CW, 5, '   |   '.join(langs))
+
+    # ══════════════════════════════════════════════════
+    # LAYOUT: SIDEBAR — colored left column + main content column
+    # ══════════════════════════════════════════════════
+    def render_sidebar():
+        pdf.set_fill_color(*h2r(ACCENT))
+        pdf.rect(0, 0, LEFT_W + M, 297, style='F')
+        ly = 16
+
+        initials = ''.join([w[0] for w in name.split() if w])[:2].upper() if name else '?'
+        pdf.set_xy(LEFT_X + 3, ly)
+        pdf.set_font(FONT, 'B', 15)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(LEFT_W - 6, 8, initials, ln=1, align='C')
+        ly += 11
+
+        pdf.set_xy(LEFT_X + 3, ly)
+        pdf.set_font(FONT, 'B', 11)
+        pdf.set_text_color(255, 255, 255)
+        pdf.multi_cell(LEFT_W - 6, 5, name, align='C')
+        ly = pdf.get_y() + 4
+
+        def side_heading(text, y):
+            pdf.set_xy(LEFT_X + 3, y)
+            pdf.set_font(FONT, 'B', 7.5)
+            pdf.set_text_color(255, 255, 255)
+            pdf.cell(LEFT_W - 6, 5, text.upper(), ln=1)
+            pdf.set_draw_color(255, 255, 255)
+            pdf.set_line_width(0.2)
+            pdf.line(LEFT_X + 3, y + 5, LEFT_X + LEFT_W - 3, y + 5)
+            return y + 8
+
+        if contacts:
+            ly = side_heading('Contact', ly)
+            pdf.set_font(FONT, '', 7.5)
+            pdf.set_text_color(240, 240, 245)
+            for c in contacts:
+                pdf.set_xy(LEFT_X + 3, ly)
+                pdf.multi_cell(LEFT_W - 6, 4, c)
+                ly = pdf.get_y()
+            ly += 3
+
+        if data.get('skills'):
+            ly = side_heading('Skills', ly)
+            pdf.set_font(FONT, '', 7.5)
+            pdf.set_text_color(255, 255, 255)
+            for s in data['skills']:
+                pdf.set_xy(LEFT_X + 3, ly)
+                pdf.cell(LEFT_W - 6, 4.5, f"- {s}", ln=1)
+                ly += 4.5
+            ly += 3
+
+        if data.get('education'):
+            ly = side_heading('Education', ly)
+            for e in data['education']:
+                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree', '')
+                pdf.set_xy(LEFT_X + 3, ly)
+                pdf.set_font(FONT, 'B', 7.5)
+                pdf.set_text_color(255, 255, 255)
+                pdf.multi_cell(LEFT_W - 6, 4, e.get('institution', ''))
+                ly = pdf.get_y()
+                pdf.set_xy(LEFT_X + 3, ly)
+                pdf.set_font(FONT, '', 7)
+                pdf.set_text_color(230, 230, 235)
+                yr = f' {e["year"]}' if e.get('year') else ''
+                pdf.multi_cell(LEFT_W - 6, 4, f"{deg}{yr}")
+                ly = pdf.get_y() + 2
+            ly += 2
+
+        if data.get('languages'):
+            ly = side_heading('Languages', ly)
+            pdf.set_font(FONT, '', 7.5)
+            pdf.set_text_color(255, 255, 255)
+            for l in data['languages']:
+                pdf.set_xy(LEFT_X + 3, ly)
+                pdf.cell(LEFT_W - 6, 4.5, f"{l.get('language','')} - {l.get('level','')}", ln=1)
+                ly += 4.5
+
+        # ── main column ──
+        ry = 16
+        if data.get('summary'):
+            ry = sec_title('SUMMARY', ACCENT, ry, RIGHT_W, size=9.5)
+            pdf.set_xy(RIGHT_X, ry)
+            pdf.set_font(FONT, '', 8.5)
+            pdf.set_text_color(*h2r('#374151'))
+            pdf.multi_cell(RIGHT_W, 4, data['summary'])
+            ry = pdf.get_y() + 4
+
+        if data.get('experience'):
+            ry = sec_title('EXPERIENCE', ACCENT, ry, RIGHT_W, size=9.5)
+            for e in data['experience']:
+                title = e.get('role', '')
+                if e.get('company'):
+                    title = f"{title} - {e['company']}" if title else e['company']
+                ry = entry_block(title, f"{e.get('start','')} - {e.get('end','Present')}",
+                                 e.get('description', ''), ry, RIGHT_W, x=RIGHT_X,
+                                 title_color='#1f2937', sub_color=ACCENT)
+
+        if data.get('projects'):
+            ry = sec_title('PROJECTS', ACCENT, ry, RIGHT_W, size=9.5)
+            for pr in data['projects']:
+                sub = f"Technologies: {pr['technologies']}" if pr.get('technologies') else ''
+                ry = entry_block(pr.get('name', ''), sub, pr.get('description', ''), ry, RIGHT_W,
+                                 x=RIGHT_X, title_color='#1f2937', sub_color=ACCENT)
+
+        if data.get('certifications'):
+            ry = sec_title('CERTIFICATIONS', ACCENT, ry, RIGHT_W, size=9.5)
+            for c in data['certifications']:
+                pdf.set_xy(RIGHT_X, ry)
+                pdf.set_font(FONT, '', 8.5)
+                pdf.set_text_color(*h2r('#374151'))
+                org = f' - {c["org"]}' if c.get('org') else ''
+                yr = f' ({c["year"]})' if c.get('year') else ''
+                pdf.cell(RIGHT_W, 4.5, f"{c.get('name','')}{org}{yr}", ln=1)
+                ry += 5
+
+    layout_fn = {
+        'plain': render_plain,
+        'centered': render_centered,
+        'banner': render_banner,
+        'sidebar': render_sidebar,
+    }.get(LAYOUT, render_centered)
+    layout_fn()
 
     buf = io.BytesIO()
     pdf.output(buf)
     return buf.getvalue()
 
 
-def _generate_docx(data):
-    """Generate a clean ATS-friendly DOCX using python-docx."""
+# ═══════════════════════════════════════════════════════════════
+# DOCX GENERATION — same TEMPLATE_STYLES config drives accent /
+# font / heading style. Sidebar & banner layouts get a colored
+# name banner since python-docx can't render a true side column.
+# ═══════════════════════════════════════════════════════════════
+
+def _generate_docx(data, template='professional'):
+    """Generate a styled DOCX using python-docx, matching the
+    template's accent color, font, and layout family."""
     from docx import Document
     from docx.shared import Pt, RGBColor, Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    style = TEMPLATE_STYLES.get(template) or TEMPLATE_STYLES['professional']
+    LAYOUT = style['layout']
+    ACCENT_HEX = style['accent'].lstrip('#')
+    accent = RGBColor.from_string(ACCENT_HEX.upper())
+    font_name = 'Times New Roman' if style['font'] == 'Times' else 'Arial'
+    dark = RGBColor(0x1f, 0x29, 0x37)
+    gray = RGBColor(0x6b, 0x72, 0x80)
+    black = RGBColor(0x11, 0x11, 0x11)
+    use_color = LAYOUT != 'plain'          # 'plain' stays ATS-safe / colorless
+    heading_color = accent if use_color else black
+    text_color = dark if use_color else black
 
     doc = Document()
+    doc.styles['Normal'].font.name = font_name
+    doc.styles['Normal'].font.size = Pt(10)
 
-    # Margins
     for section in doc.sections:
-        section.top_margin    = Inches(0.75)
-        section.bottom_margin = Inches(0.75)
-        section.left_margin   = Inches(0.9)
-        section.right_margin  = Inches(0.9)
+        section.top_margin    = Inches(0.7)
+        section.bottom_margin = Inches(0.7)
+        section.left_margin   = Inches(0.85)
+        section.right_margin  = Inches(0.85)
 
-    purple = RGBColor(0xa7, 0x8b, 0xfa)
-    dark   = RGBColor(0x1e, 0x1b, 0x4b)
-    gray   = RGBColor(0x6b, 0x72, 0x80)
+    def set_cell_background(cell, hex_color):
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), hex_color)
+        cell._tc.get_or_add_tcPr().append(shd)
 
-    def add_name(text):
-        p = doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = p.add_run(text)
+    p = data.get('personal', {})
+    name = p.get('name', '') or 'Your Name'
+    contacts = [x for x in [p.get('email'), p.get('phone'), p.get('location'),
+                            p.get('linkedin'), p.get('portfolio')] if x]
+
+    if LAYOUT in ('banner', 'sidebar') and use_color:
+        # colored name banner (stand-in for a colored header/sidebar)
+        table = doc.add_table(rows=1, cols=1)
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        cell = table.rows[0].cells[0]
+        set_cell_background(cell, ACCENT_HEX)
+        cell.width = Inches(6.8)
+        cp = cell.paragraphs[0]
+        cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = cp.add_run(name)
         run.bold = True
         run.font.size = Pt(20)
-        run.font.color.rgb = dark
-        p.paragraph_format.space_after = Pt(4)
-
-    def add_contact(text):
-        p = doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = p.add_run(text)
-        run.font.size = Pt(9)
-        run.font.color.rgb = gray
-        p.paragraph_format.space_after = Pt(6)
+        run.font.name = font_name
+        run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        cp.paragraph_format.space_before = Pt(6)
+        if contacts:
+            cp2 = cell.add_paragraph()
+            cp2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run2 = cp2.add_run(' | '.join(contacts))
+            run2.font.size = Pt(9)
+            run2.font.name = font_name
+            run2.font.color.rgb = RGBColor(0xF0, 0xF0, 0xF0)
+            cp2.paragraph_format.space_after = Pt(6)
+        doc.add_paragraph().paragraph_format.space_after = Pt(2)
+    else:
+        align = WD_ALIGN_PARAGRAPH.CENTER if LAYOUT != 'plain' else WD_ALIGN_PARAGRAPH.LEFT
+        np = doc.add_paragraph()
+        np.alignment = align
+        run = np.add_run(name)
+        run.bold = True
+        run.font.size = Pt(18 if LAYOUT != 'plain' else 16)
+        run.font.name = font_name
+        run.font.color.rgb = heading_color
+        np.paragraph_format.space_after = Pt(4)
+        if contacts:
+            cpar = doc.add_paragraph()
+            cpar.alignment = align
+            crun = cpar.add_run(' | '.join(contacts))
+            crun.font.size = Pt(9.5)
+            crun.font.name = font_name
+            crun.font.color.rgb = gray
+            cpar.paragraph_format.space_after = Pt(6)
 
     def add_section_heading(text):
-        p = doc.add_paragraph()
-        run = p.add_run(text)
+        hp = doc.add_paragraph()
+        run = hp.add_run(text.upper())
         run.bold = True
         run.font.size = Pt(11)
-        run.font.color.rgb = purple
-        p.paragraph_format.space_before = Pt(10)
-        p.paragraph_format.space_after  = Pt(2)
-        # underline via border - add bottom border
-        from docx.oxml.ns import qn
-        from docx.oxml import OxmlElement
-        pPr = p._p.get_or_add_pPr()
+        run.font.name = font_name
+        run.font.color.rgb = heading_color
+        hp.paragraph_format.space_before = Pt(10)
+        hp.paragraph_format.space_after = Pt(2)
+        pPr = hp._p.get_or_add_pPr()
         pBdr = OxmlElement('w:pBdr')
         bottom = OxmlElement('w:bottom')
         bottom.set(qn('w:val'), 'single')
         bottom.set(qn('w:sz'), '4')
         bottom.set(qn('w:space'), '1')
-        bottom.set(qn('w:color'), 'a78bfa')
+        bottom.set(qn('w:color'), ACCENT_HEX if use_color else '999999')
         pBdr.append(bottom)
         pPr.append(pBdr)
 
     def add_body(text, bold=False, italic=False, size=9.5, color=None):
-        p = doc.add_paragraph()
-        run = p.add_run(text)
+        bp = doc.add_paragraph()
+        run = bp.add_run(text)
         run.bold = bold
         run.italic = italic
         run.font.size = Pt(size)
-        run.font.color.rgb = color or dark
-        p.paragraph_format.space_after = Pt(2)
-        return p
-
-    p = data.get('personal', {})
-    if p.get('name'):
-        add_name(p['name'])
-
-    contacts = [x for x in [p.get('email'), p.get('phone'), p.get('location'), p.get('linkedin'), p.get('portfolio')] if x]
-    if contacts:
-        add_contact(' | '.join(contacts))
+        run.font.name = font_name
+        run.font.color.rgb = color or text_color
+        bp.paragraph_format.space_after = Pt(2)
+        return bp
 
     if data.get('summary'):
-        add_section_heading('PROFESSIONAL SUMMARY')
+        add_section_heading('Professional Summary')
         add_body(data['summary'])
 
     if data.get('experience'):
-        add_section_heading('WORK EXPERIENCE')
+        add_section_heading('Work Experience')
         for e in data['experience']:
             if e.get('role') or e.get('company'):
-                add_body(f"{e.get('role','')} — {e.get('company','')}", bold=True)
+                title = e.get('role', '')
+                if e.get('company'):
+                    title = f"{title} — {e['company']}" if title else e['company']
+                add_body(title, bold=True)
                 add_body(f"{e.get('start','')} – {e.get('end','Present')}", italic=True, color=gray)
                 if e.get('description'):
                     for line in e['description'].split('\n'):
@@ -1067,19 +1024,19 @@ def _generate_docx(data):
                             add_body(f'• {line}')
 
     if data.get('education'):
-        add_section_heading('EDUCATION')
+        add_section_heading('Education')
         for e in data['education']:
             if e.get('institution') or e.get('degree'):
-                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree','')
+                deg = f"{e.get('degree','')} in {e.get('field','')}" if e.get('field') else e.get('degree', '')
                 add_body(deg, bold=True)
                 add_body(f"{e.get('institution','')} {('· ' + str(e['year'])) if e.get('year') else ''}", color=gray)
 
     if data.get('skills'):
-        add_section_heading('SKILLS')
+        add_section_heading('Skills')
         add_body(', '.join(data['skills']))
 
     if data.get('projects'):
-        add_section_heading('PROJECTS')
+        add_section_heading('Projects')
         for pr in data['projects']:
             if pr.get('name'):
                 add_body(pr['name'], bold=True)
@@ -1089,13 +1046,13 @@ def _generate_docx(data):
                     add_body(pr['description'])
 
     if data.get('certifications'):
-        add_section_heading('CERTIFICATIONS')
+        add_section_heading('Certifications')
         for c in data['certifications']:
             if c.get('name'):
                 add_body(f"{c['name']} — {c.get('org','')} {c.get('year','')}")
 
     if data.get('languages'):
-        add_section_heading('LANGUAGES')
+        add_section_heading('Languages')
         langs = [f"{l.get('language','')} ({l.get('level','')})" for l in data['languages'] if l.get('language')]
         add_body(', '.join(langs))
 

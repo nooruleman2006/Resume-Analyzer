@@ -1,3 +1,4 @@
+import re
 import os
 import mimetypes
 from config import Config
@@ -47,6 +48,10 @@ def validate_password(password):
         return False, "Password must contain at least one number."
     return True, ''
 
+def validate_email(email):
+    """Return True if the email looks like name@domain.tld."""
+    pattern = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$'
+    return bool(re.match(pattern, email.strip()))
 
 def validate_register_form(data):
     """Validate registration form fields. Returns list of error strings."""
@@ -55,9 +60,11 @@ def validate_register_form(data):
         errors.append("First name is required.")
     if not data.get('last_name', '').strip():
         errors.append("Last name is required.")
-    if not data.get('email', '').strip():
+
+    email = data.get('email', '').strip()
+    if not email:
         errors.append("Email is required.")
-    if '@' not in data.get('email', ''):
+    elif not validate_email(email):
         errors.append("Enter a valid email address.")
 
     ok, msg = validate_password(data.get('password', ''))
